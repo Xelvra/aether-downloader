@@ -47,6 +47,7 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ffmpeg -y
       - name: Build binary
+        shell: bash
         run: |
           if [ "${{ matrix.macos_app }}" = "true" ]; then
             uv run python build.py --onedir
