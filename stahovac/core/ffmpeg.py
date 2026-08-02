@@ -12,6 +12,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
 import time
 import urllib.parse
@@ -30,6 +31,16 @@ EVERMEET_INFO_URL = "https://evermeet.cx/ffmpeg/info/ffmpeg/release"
 
 _BINARY_NAMES = ("ffmpeg", "ffprobe")
 
+# Známá umístění FFmpeg, která nemusí být v PATH: .app spuštěný z Finderu má
+# minimální PATH (/usr/bin, /bin, ...), takže Homebrew (/opt/homebrew na
+# Apple Silicon, /usr/local na Intelu) tam chybí – aplikace by falešně hlásila,
+# že FFmpeg není nainstalovaný.
+_MACOS_HOMEBREW_PATHS: tuple[Path, ...] = (
+    Path("/opt/homebrew/bin/ffmpeg"),
+    Path("/usr/local/bin/ffmpeg"),
+    Path.home() / "homebrew" / "bin" / "ffmpeg",
+)
+
 
 class FfmpegInstallError(Exception):
     """Chyba při stahování nebo instalaci FFmpeg."""
@@ -43,6 +54,9 @@ def bin_dir() -> Path:
 def find_ffmpeg() -> Path | None:
     """Najde spustitelný FFmpeg – nejdřív v systému (PATH), pak v ``bin/``.
 
+    Na macOS se navíc kontrolují známá umístění Homebrew, protože .app
+    spuštěný z Finderu nemá Homebrew adresáře v PATH.
+
     Vrací absolutní cestu k binárce, nebo ``None``, pokud není k dispozici.
     """
     system_ffmpeg = shutil.which("ffmpeg")
@@ -51,6 +65,10 @@ def find_ffmpeg() -> Path | None:
     local = bin_dir() / ("ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg")
     if local.is_file() and (platform.system() == "Windows" or os.access(local, os.X_OK)):
         return local.resolve()
+    if sys.platform == "darwin":
+        for candidate in _MACOS_HOMEBREW_PATHS:
+            if candidate.is_file():
+                return candidate.resolve()
     return None
 
 

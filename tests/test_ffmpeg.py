@@ -127,13 +127,30 @@ class TestFindFfmpeg:
 
     def test_none_when_missing(self, monkeypatch, base):
         monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
+        monkeypatch.setattr(ffmpeg_mod, "_MACOS_HOMEBREW_PATHS", ())
         assert find_ffmpeg() is None
 
     def test_local_ignored_when_not_executable(self, monkeypatch, base):
         monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
+        monkeypatch.setattr(ffmpeg_mod, "_MACOS_HOMEBREW_PATHS", ())
         (base / "bin").mkdir()
         (base / "bin" / "ffmpeg").write_text("x")
         monkeypatch.setattr(ffmpeg_mod.os, "access", lambda path, mode: False)
+        assert find_ffmpeg() is None
+
+    def test_macos_homebrew_fallback(self, monkeypatch, base):
+        monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
+        monkeypatch.setattr(ffmpeg_mod.sys, "platform", "darwin")
+        binary = base / "homebrew-ffmpeg"
+        binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o755)
+        monkeypatch.setattr(ffmpeg_mod, "_MACOS_HOMEBREW_PATHS", (binary,))
+        assert find_ffmpeg() == binary.resolve()
+
+    def test_macos_homebrew_missing(self, monkeypatch, base):
+        monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
+        monkeypatch.setattr(ffmpeg_mod.sys, "platform", "darwin")
+        monkeypatch.setattr(ffmpeg_mod, "_MACOS_HOMEBREW_PATHS", (base / "nope",))
         assert find_ffmpeg() is None
 
     def test_windows_local_exec(self, monkeypatch, base):
@@ -162,6 +179,7 @@ class TestFfmpegDir:
 
     def test_none_when_missing(self, monkeypatch, base):
         monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
+        monkeypatch.setattr(ffmpeg_mod, "_MACOS_HOMEBREW_PATHS", ())
         assert ffmpeg_dir() is None
 
 
