@@ -111,6 +111,7 @@ def build_help_content(dismiss_callback) -> ft.Container:
                     "2. V roletce „Importovat cookies z prohlížeče“ vyber svůj prohlížeč.",
                     "3. Hotovo – aplikace se pak tváří jako přihlášený uživatel.",
                     "Tohle pomáhá hlavně při chybě 403 (přístup odepřen).",
+                    "Poznámka: cookies se používají jen pro Kick a Twitch – na YouTube se záměrně neaplikují.",
                 ),
                 _section(
                     "Instalace FFmpeg",
@@ -191,6 +192,9 @@ def build_help_content(dismiss_callback) -> ft.Container:
                     "Pokud aplikaci spustíš na zařízení bez obrazovky (např. Android Termux), "
                     "automaticky se otevře jako webová stránka.",
                     "Adresu, na které běží, najdeš v terminálu, kde jsi ji spustil – stačí ji otevřít v prohlížeči.",
+                    "Pozor: výchozí adresa 127.0.0.1 je přístupná jen z tohoto zařízení. "
+                    "Když server zpřístupníš jiným zařízením v síti (AETHER_HOST / --host), "
+                    "kdokoli v síti může procházet soubory a spouštět stahování – nemění adresu jen tak.",
                 ),
                 ft.Divider(color=COLOR_SURFACE),
                 ft.Text(

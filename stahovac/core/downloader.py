@@ -602,6 +602,8 @@ class Downloader:
     def _is_transient_error(err: str) -> bool:
         markers = (
             "http error 403",
+            "http error 408",
+            "http error 410",
             "http error 429",
             "http error 500",
             "http error 502",
@@ -609,7 +611,9 @@ class Downloader:
             "http error 504",
             "timed out",
             "timeout",
+            "connection reset",
             "connection",
+            "rate limit",
             "temporary failure in name resolution",
             "unable to download json metadata",
             "unable to download webpage",
@@ -625,6 +629,12 @@ class Downloader:
                 job_id,
                 "Přístup zamítnut (403). Soukromý obsah vyžaduje přihlášení/cookies v Nastavení; "
                 "jinak může jít o dočasné omezení – zkus to znovu později.",
+                "orange",
+            )
+        elif "429" in err or "rate limit" in err.lower() or "http error 410" in err.lower():
+            self.on_status(
+                job_id,
+                "Dočasné omezení ze strany serveru (příliš mnoho požadavků). Počkej chvíli a zkus to znovu.",
                 "orange",
             )
         elif "404" in err or "Video unavailable" in err or "not found (deleted or unavailable)" in err:

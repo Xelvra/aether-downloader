@@ -81,6 +81,11 @@ jobs:
           else
             cp dist/stahovac "stage/${{ matrix.artifact }}"
           fi
+      - name: Generate checksums
+        shell: bash
+        run: |
+          cd stage && sha256sum * > "${{ matrix.artifact }}.sha256"
+          cat "${{ matrix.artifact }}.sha256"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}

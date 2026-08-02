@@ -66,6 +66,15 @@ class TestApiGet:
         monkeypatch.setattr(kick.urllib.request, "urlopen", boom)
         assert kick._api_get("path") is None
 
+    def test_unexpected_error_logs_warning(self, monkeypatch, caplog):
+        def boom(*a, **k):
+            raise ValueError("unexpected payload")
+
+        monkeypatch.setattr(kick.urllib.request, "urlopen", boom)
+        with caplog.at_level("WARNING", logger="stahovac.platforms.kick"):
+            assert kick._api_get("path") is None
+        assert any("unexpected error" in rec.getMessage() for rec in caplog.records)
+
     def test_sends_authorization_header(self, monkeypatch):
         captured = {}
 
@@ -125,6 +134,15 @@ class TestFetchUrl:
 
         monkeypatch.setattr(kick.urllib.request, "urlopen", boom)
         assert kick._fetch_url("https://example.com/playlist.m3u8") is None
+
+    def test_unexpected_error_logs_warning(self, monkeypatch, caplog):
+        def boom(*a, **k):
+            raise ValueError("unexpected payload")
+
+        monkeypatch.setattr(kick.urllib.request, "urlopen", boom)
+        with caplog.at_level("WARNING", logger="stahovac.platforms.kick"):
+            assert kick._fetch_url("https://example.com/playlist.m3u8") is None
+        assert any("unexpected error" in rec.getMessage() for rec in caplog.records)
 
     def test_sends_authorization_header(self, monkeypatch):
         captured = {}
@@ -233,12 +251,12 @@ class TestFetchVodPage:
     )
     PAGE = (
         '<script>self.__next_f.push([1,"'
-        r'\"category\":{\"id\":15,\"name\":\"Just Chatting\",\"slug\":\"just-chatting\"},'
-        r'\"channel\":{\"id\":50494549,\"slug\":\"aethercosmologyczsk\",\"username\":\"AetherCosmologyczsk\"},'
-        r'\"duration\":54543,\"end_time\":\"2026-07-31T21:54:21Z\",\"id\":\"019fb6ea-0d60-75ca-8756-11f0d8b1f817\",'
-        r'\"is_live\":false,\"language\":\"cs\",\"status\":\"sub_only\",'
-        r'\"thumbnail\":{\"src\":\"https://images.kick.com/thumb.webp\",\"srcSet\":\"https://images.kick.com/1080.webp 1920w\"},'
-        r'\"title\":\"#156 Sub Only Stream\",\"viewer_count\":3214}'
+        r"\"category\":{\"id\":15,\"name\":\"Just Chatting\",\"slug\":\"just-chatting\"},"
+        r"\"channel\":{\"id\":50494549,\"slug\":\"aethercosmologyczsk\",\"username\":\"AetherCosmologyczsk\"},"
+        r"\"duration\":54543,\"end_time\":\"2026-07-31T21:54:21Z\",\"id\":\"019fb6ea-0d60-75ca-8756-11f0d8b1f817\","
+        r"\"is_live\":false,\"language\":\"cs\",\"status\":\"sub_only\","
+        r"\"thumbnail\":{\"src\":\"https://images.kick.com/thumb.webp\",\"srcSet\":\"https://images.kick.com/1080.webp 1920w\"},"
+        r"\"title\":\"#156 Sub Only Stream\",\"viewer_count\":3214}"
         '"])</script>'
         '<script>var x="' + M3U8 + '"</script>'
     )
@@ -285,9 +303,7 @@ class TestFetchVodPage:
 
     def test_prefers_vod_m3u8_over_live_player(self, monkeypatch):
         page = (
-            '<script>var x="' + self.LIVE_M3U8 + '"</script>'
-            + self.PAGE
-            + '<script>var y="' + self.M3U8 + '"</script>'
+            '<script>var x="' + self.LIVE_M3U8 + '"</script>' + self.PAGE + '<script>var y="' + self.M3U8 + '"</script>'
         )
         monkeypatch.setattr(kick, "_fetch_url", lambda url, cancel_check=None: page)
         result = kick._fetch_vod_page(self.URL)
@@ -405,7 +421,14 @@ class TestResolveVodId:
                 "uuid": "u2",
                 "source": "https://media.example.com/s.m3u8",
                 "views": 3,
-                "livestream": {"vod_id": "abc", "id": 7, "slug": "ch", "session_title": "T", "duration": 0, "categories": []},
+                "livestream": {
+                    "vod_id": "abc",
+                    "id": 7,
+                    "slug": "ch",
+                    "session_title": "T",
+                    "duration": 0,
+                    "categories": [],
+                },
             }
 
         monkeypatch.setattr(kick, "_api_get", fake_get)
@@ -505,13 +528,7 @@ class TestParseMasterPlaylist:
         assert formats[1]["tbr"] == 1
 
     def test_skips_comments_and_blanks_between_stream_inf_and_uri(self):
-        playlist = (
-            "#EXTM3U\n"
-            '#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360\n'
-            "# a comment\n"
-            "\n"
-            "360p.m3u8\n"
-        )
+        playlist = "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360\n# a comment\n\n360p.m3u8\n"
         formats = kick._parse_master_playlist(playlist, "https://cdn.example.com/master.m3u8")
         assert len(formats) == 1
         assert formats[0]["height"] == 360

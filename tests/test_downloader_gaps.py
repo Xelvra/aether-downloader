@@ -273,9 +273,7 @@ class TestRangedDownload:
 
     def _patch_success(self, monkeypatch, tmp_path, job_dir):
         monkeypatch.setattr(dl_mod, "find_ffmpeg", lambda: Path("/opt/ffmpeg/bin/ffmpeg"))
-        monkeypatch.setattr(
-            dl_mod, "_select_hls_formats", lambda info, quality: ({"url": "https://x/v.m3u8"}, None)
-        )
+        monkeypatch.setattr(dl_mod, "_select_hls_formats", lambda info, quality: ({"url": "https://x/v.m3u8"}, None))
         monkeypatch.setattr(dl_mod, "_build_ranged_cmd", lambda *a, **k: ["ffmpeg", "arg"])
         monkeypatch.setattr(dl_mod.subprocess, "Popen", lambda *a, **k: object())
         dl = self._make_dl()

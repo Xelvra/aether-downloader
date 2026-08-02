@@ -7,7 +7,7 @@ import flet as ft
 import stahovac.gui.theme as th
 from stahovac.config.constants import APP_TITLE, COOKIES_FILE_OPTION, FORMAT_MP4, VERSION_DISPLAY
 from stahovac.core import ffmpeg
-from stahovac.core.validator import validate_crf, validate_time_range
+from stahovac.core.validator import is_valid_url, validate_crf, validate_time_range
 from stahovac.downloader import DownloadManager
 from stahovac.gui.download_view import DownloadView
 from stahovac.gui.help_view import build_help_content
@@ -702,6 +702,10 @@ class GuiApp:
             return
         if not url:
             self.on_status("Neplatná URL: Zadej odkaz na video.", COLOR_WARN)
+            self._force_unlock_ui()
+            return
+        if not is_valid_url(url):
+            self.on_status("Neplatná URL: Zadej platný odkaz na video.", COLOR_WARN)
             self._force_unlock_ui()
             return
         quality_params = self.quality_view.to_params()

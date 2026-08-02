@@ -96,6 +96,8 @@ uv run python main.py
 
 Termux vypíše webovou adresu — otevři ji v prohlížeči telefonu. Podrobnosti najdeš v [CONTRIBUTING.md](CONTRIBUTING.md).
 
+> ⚠️ **Webový režim** běží ve výchozím nastavení jen na adrese `127.0.0.1` (přístupný pouze z daného zařízení). Server nemá žádné přihlášení — pokud ho zpřístupníš jiným zařízením v síti (`AETHER_HOST` / `--host`), **kdokoli v síti může procházet soubory a spouštět stahování**. Výchozí nastavení neměň, pokud si jsi jistý, co děláš.
+
 ---
 
 ## Instalace FFmpeg (nutný krok)

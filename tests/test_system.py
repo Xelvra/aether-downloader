@@ -60,7 +60,7 @@ class TestOpenPath:
     def test_windows_startfile_success(self, tmp_path, monkeypatch):
         monkeypatch.setattr(sys_mod.platform, "system", lambda: "Windows")
         called = []
-        monkeypatch.setattr(sys_mod, "_run_startfile", lambda p: (called.append(p) or (True, "")))
+        monkeypatch.setattr(sys_mod, "_run_startfile", lambda p: called.append(p) or (True, ""))
         ok, message = open_path(str(tmp_path))
         assert ok is True
         assert message == ""
@@ -103,6 +103,74 @@ class TestOpenPath:
 
         monkeypatch.setattr(sys_mod, "_run", fake_run)
         ok, _ = open_path(str(tmp_path))
+        assert ok is True
+
+
+class TestRevealInFileManager:
+    def test_nonexistent_path_returns_error(self):
+        ok, message = sys_mod.reveal_in_file_manager("/nonexistent/path/12345")
+        assert ok is False
+        assert "neexistuje" in message.lower()
+
+    def test_invalid_path_returns_error(self):
+        ok, message = sys_mod.reveal_in_file_manager("\x00")
+        assert ok is False
+
+    def test_windows_explorer_select(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Windows")
+        called = []
+        monkeypatch.setattr(sys_mod.subprocess, "Popen", lambda cmd, start_new_session=False: called.append(cmd))
+        ok, message = sys_mod.reveal_in_file_manager(str(tmp_path))
+        assert ok is True
+        assert message == ""
+        assert called == [["explorer", f"/select,{tmp_path.resolve()}"]]
+
+    def test_macos_open_reveal(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Darwin")
+        monkeypatch.setattr(sys_mod, "_run", lambda cmd, timeout=10: (True, ""))
+        ok, _ = sys_mod.reveal_in_file_manager(str(tmp_path))
+        assert ok is True
+
+    def test_linux_selects_file_with_nautilus(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Linux")
+        calls = []
+
+        def fake_run(cmd, timeout=10):
+            calls.append(cmd)
+            return (True, "") if cmd[0] == "nautilus" else (False, "žádný program")
+
+        monkeypatch.setattr(sys_mod, "_run", fake_run)
+        ok, _ = sys_mod.reveal_in_file_manager(str(tmp_path))
+        assert ok is True
+        assert calls[0] == ["nautilus", "--select", str(tmp_path.resolve())]
+
+    def test_linux_missing_managers_falls_back_to_parent_folder(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Linux")
+        calls = []
+
+        def fake_run(cmd, timeout=10):
+            calls.append(cmd)
+            return (False, f"Příkaz nenalezen: {cmd[0]}")
+
+        def fake_open_linux(path):
+            calls.append(["xdg-open", path])
+            return (True, "")
+
+        monkeypatch.setattr(sys_mod, "_run", fake_run)
+        monkeypatch.setattr(sys_mod, "_open_linux", fake_open_linux)
+        ok, _ = sys_mod.reveal_in_file_manager(str(tmp_path))
+        assert ok is True
+        assert calls[-1] == ["xdg-open", str(tmp_path.parent.resolve())]
+
+    def test_linux_select_failure_falls_back_to_parent_folder(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Linux")
+
+        def fake_run(cmd, timeout=10):
+            return (False, "nešlo vybrat")
+
+        monkeypatch.setattr(sys_mod, "_run", fake_run)
+        monkeypatch.setattr(sys_mod, "_open_linux", lambda path: (True, ""))
+        ok, _ = sys_mod.reveal_in_file_manager(str(tmp_path))
         assert ok is True
 
 

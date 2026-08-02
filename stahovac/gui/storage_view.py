@@ -150,6 +150,11 @@ class StorageView:
                                 spacing=sz(8),
                             ),
                             self.cookies_file_row,
+                            ft.Text(
+                                "Poznámka: cookies se aplikují na Kick a Twitch. Na YouTube se záměrně nepoužívají.",
+                                size=sz(11),
+                                color=COLOR_TEXT_SECONDARY,
+                            ),
                             ft.Divider(height=1, color=COLOR_SURFACE),
                             ft.Text(
                                 "FFmpeg:",

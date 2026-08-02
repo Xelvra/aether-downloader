@@ -5,13 +5,14 @@ import flet as ft
 import stahovac.gui.theme as th
 from stahovac.gui.theme import (
     COLOR_ACCENT,
+    COLOR_SUCCESS,
     COLOR_SURFACE,
     COLOR_TEXT,
     COLOR_TEXT_SECONDARY,
     sz,
 )
 from stahovac.storage.history import HistoryManager
-from stahovac.utils.system import open_path
+from stahovac.utils.system import open_path, reveal_in_file_manager
 
 
 class LogsView:
@@ -121,10 +122,18 @@ class LogsView:
                                     spacing=sz(2),
                                 ),
                                 ft.IconButton(
+                                    icon=ft.Icons.PLAY_CIRCLE_OUTLINED,
+                                    icon_color=COLOR_SUCCESS,
+                                    icon_size=sz(18),
+                                    tooltip="Otevřít video",
+                                    on_click=lambda e, p=item.get("file_path", ""): self._open_history_item(p),  # noqa: B008
+                                ),
+                                ft.IconButton(
                                     icon=ft.Icons.FOLDER_OPEN_ROUNDED,
                                     icon_color=COLOR_ACCENT,
                                     icon_size=sz(18),
-                                    on_click=lambda e, p=item.get("file_path", ""): self._open_history_item(p),  # noqa: B008
+                                    tooltip="Otevřít složku",
+                                    on_click=lambda e, p=item.get("file_path", ""): self._reveal_history_item(p),  # noqa: B008
                                 ),
                             ],
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -137,6 +146,11 @@ class LogsView:
 
     def _open_history_item(self, file_path: str) -> None:
         ok, message = open_path(file_path)
+        if not ok:
+            self._notify(message)
+
+    def _reveal_history_item(self, file_path: str) -> None:
+        ok, message = reveal_in_file_manager(file_path)
         if not ok:
             self._notify(message)
 

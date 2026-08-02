@@ -1245,6 +1245,37 @@ class TestDownloadWithYtdlp:
         assert any("Neočekávaná chyba" in line for line in logs)
 
 
+class TestIsTransientError:
+    @pytest.mark.parametrize(
+        "err",
+        [
+            "HTTP Error 403: Forbidden",
+            "HTTP Error 408: Request Timeout",
+            "HTTP Error 410: Gone",
+            "HTTP Error 429: Too Many Requests",
+            "HTTP Error 500",
+            "HTTP Error 503",
+            "timed out",
+            "Connection reset by peer",
+            "rate limit reached",
+            "temporary failure in name resolution",
+        ],
+    )
+    def test_transient(self, err):
+        assert Downloader._is_transient_error(err) is True
+
+    @pytest.mark.parametrize(
+        "err",
+        [
+            "Some random failure",
+            "Video is not available",
+            "HTTP Error 404: Not Found",
+        ],
+    )
+    def test_not_transient(self, err):
+        assert Downloader._is_transient_error(err) is False
+
+
 class TestReportDownloadError:
     def _make_dl(self):
         dl = Downloader({})
@@ -1269,6 +1300,14 @@ class TestReportDownloadError:
         dl, statuses = self._make_dl()
         dl._report_download_error("ERROR: 404 Not Found", "j1")
         assert statuses == ["Video není dostupné nebo bylo smazáno."]
+
+    @pytest.mark.parametrize("err", ["HTTP Error 429: Too Many Requests", "rate limit reached", "HTTP Error 410: Gone"])
+    def test_rate_limit_message(self, err):
+        dl, statuses = self._make_dl()
+        dl._report_download_error(err, "j1")
+        assert statuses == [
+            "Dočasné omezení ze strany serveru (příliš mnoho požadavků). Počkej chvíli a zkus to znovu."
+        ]
 
     def test_fallback_message(self):
         dl, statuses = self._make_dl()

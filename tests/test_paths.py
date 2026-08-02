@@ -24,9 +24,7 @@ class TestPaths:
     def test_get_base_dir_frozen(self, monkeypatch):
         set_base_dir(None)
         monkeypatch.setattr(sys, "frozen", True, raising=False)
-        monkeypatch.setattr(
-            "stahovac.utils.paths.get_frozen_base_dir", lambda: Path("/frozen/base")
-        )
+        monkeypatch.setattr("stahovac.utils.paths.get_frozen_base_dir", lambda: Path("/frozen/base"))
         assert get_base_dir() == Path("/frozen/base")
 
 
@@ -34,9 +32,7 @@ class TestFrozenBaseDir:
     def test_app_bundle_uses_application_support(self, monkeypatch):
         monkeypatch.setattr(sys, "frozen", True, raising=False)
         monkeypatch.setattr(sys, "platform", "darwin")
-        monkeypatch.setattr(
-            sys, "executable", "/Applications/Aether Downloader.app/Contents/MacOS/stahovac"
-        )
+        monkeypatch.setattr(sys, "executable", "/Applications/Aether Downloader.app/Contents/MacOS/stahovac")
         expected = Path.home() / "Library" / "Application Support" / "AetherDownloader"
         assert get_frozen_base_dir() == expected
 

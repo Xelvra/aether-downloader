@@ -75,6 +75,61 @@ def open_path(path_str: str) -> tuple[bool, str]:
         return False, f"{type(exc).__name__}: {exc}"
 
 
+_LINUX_SELECT_CMDS: tuple[tuple[str, ...], ...] = (
+    ("nautilus", "--select"),
+    ("dolphin", "--select"),
+    ("nemo", "--select"),
+    ("thunar",),
+    ("pcmanfm", "--select"),
+)
+
+
+def _reveal_windows(path: str) -> tuple[bool, str]:
+    try:
+        subprocess.Popen(["explorer", f"/select,{path}"], start_new_session=True)
+        return True, ""
+    except Exception as exc:  # pragma: no cover - platform dependent
+        return False, f"{type(exc).__name__}: {exc}"
+
+
+def _reveal_linux(path: str) -> tuple[bool, str]:
+    """Linux/BSD: vybrat soubor ve správci souborů, jinak otevřít rodičovskou složku."""
+    last = "Nepodařilo se otevřít správce souborů."
+    for args in _LINUX_SELECT_CMDS:
+        cmd = [*args, path]
+        ok, msg = _run(cmd)
+        if ok:
+            return True, ""
+        if msg.startswith("Příkaz nenalezen"):
+            continue
+        last = msg or last
+    return _open_linux(str(Path(path).parent))
+
+
+def reveal_in_file_manager(path_str: str) -> tuple[bool, str]:
+    """Ukáže soubor ve správci souborů (vybere ho v dané složce).
+
+    Vrací (úspěch, zpráva). Při neúspěchu otevře alespoň rodičovskou složku
+    souboru, takže uživatel vždy skončí na místě, kde soubor leží.
+    """
+    try:
+        path = Path(path_str).expanduser().resolve()
+    except (OSError, ValueError) as exc:
+        return False, f"Neplatná cesta: {exc}"
+    if not path.exists():
+        return False, f"Cesta neexistuje:\n{path}"
+
+    system = platform.system()
+    try:
+        if system == "Windows":
+            return _reveal_windows(str(path))
+        if system == "Darwin":
+            return _run(["open", "-R", str(path)])
+        return _reveal_linux(str(path))
+    except Exception as exc:  # pragma: no cover - platform dependent
+        return False, f"{type(exc).__name__}: {exc}"
+
+
 def open_folder_in_explorer(path_str: str) -> bool:
     """Zpětně kompatibilní varianta bez zprávy (vrací jen úspěch)."""
     ok, _ = open_path(path_str)

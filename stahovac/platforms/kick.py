@@ -10,7 +10,7 @@ import logging
 import re
 import urllib.parse
 import urllib.request
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 from stahovac.utils.ssl import make_ssl_context
 
@@ -98,8 +98,11 @@ def _api_get(path: str, timeout: int = 15, cancel_check=None, auth_token: str | 
     except HTTPError as e:
         logger.debug("Kick API %s -> %s %s", path, e.code, e.reason)
         return None
+    except (URLError, TimeoutError, OSError) as e:
+        logger.debug("Kick API %s network error: %s", path, e)
+        return None
     except Exception as e:
-        logger.debug("Kick API %s error: %s", path, e)
+        logger.warning("Kick API %s unexpected error: %r", path, e)
         return None
 
 
@@ -264,8 +267,11 @@ def _fetch_url(url: str, timeout: int = 15, cancel_check=None, auth_token: str |
         return body
     except _KickCancelError:
         raise
-    except Exception as e:
+    except (URLError, TimeoutError, OSError) as e:
         logger.debug("Failed to fetch %s: %s", url, e)
+        return None
+    except Exception as e:
+        logger.warning("Failed to fetch %s – unexpected error: %r", url, e)
         return None
 
 

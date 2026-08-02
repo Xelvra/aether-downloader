@@ -25,9 +25,7 @@ def get_frozen_base_dir() -> Path:
     """
     exe = Path(sys.executable)
     in_bundle = (
-        sys.platform == "darwin"
-        and exe.parent.parent.name == "Contents"
-        and exe.parent.parent.parent.suffix == ".app"
+        sys.platform == "darwin" and exe.parent.parent.name == "Contents" and exe.parent.parent.parent.suffix == ".app"
     )
     if in_bundle:
         return Path.home() / "Library" / APP_SUPPORT_DIR_NAME / APP_DATA_DIR_NAME
