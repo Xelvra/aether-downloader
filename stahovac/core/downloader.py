@@ -591,8 +591,7 @@ class Downloader:
                 self.on_status(job_id, "Neočekávaná chyba při stahování.", "orange")
                 self._cleanup_output(opts)
                 return False
-        self.on_status(job_id, "Stahování selhalo.", "orange")
-        return False
+        return False  # pragma: no cover – smyčka retry vždy vrací v některé větvi
 
     @staticmethod
     def _is_transient_error(err: str) -> bool:
