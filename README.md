@@ -38,33 +38,32 @@ Podrobný postup pro konkrétní systém najdeš níže.
 
 ### 🪟 Windows
 
-1. Na [stránce Releases](https://github.com/Xelvra/aether-downloader/releases) stáhni nejnovější `.zip` pro Windows.
-2. Rozbal ho (pravé tlačítko myši → **Rozbalit vše**).
-3. V rozbalené složce spusť `stahovac.exe`.
-4. Windows pravděpodobně zobrazí modrou obrazovku s varováním — to je normální, protože aplikace nemá placený certifikát od Microsoftu. Klikni na **Další informace** → **Přesto spustit**.
+1. Na [stránce Releases](https://github.com/Xelvra/aether-downloader/releases) stáhni nejnovější verzi souboru **`stahovac-windows-x86_64.exe`**.
+2. Soubor se nemusí rozbalovat — stačí na něj poklepat.
+3. Windows pravděpodobně zobrazí modrou obrazovku s varováním — to je normální, protože aplikace nemá placený certifikát od Microsoftu. Klikni na **Další informace** → **Přesto spustit**.
 
 > ⚠️ Před prvním stahováním ještě nainstaluj FFmpeg — viz [sekce níže](#instalace-ffmpeg-nutný-krok). Nejjednodušší je kliknout v aplikaci na tlačítko **Stáhnout FFmpeg**.
 
 ### 🐧 Linux
 
-1. Na [stránce Releases](https://github.com/Xelvra/aether-downloader/releases) stáhni verzi pro Linux a rozbal archiv.
-2. Soubor `stahovac` je potřeba nejdřív „odemknout" pro spuštění:
+1. Na [stránce Releases](https://github.com/Xelvra/aether-downloader/releases) stáhni nejnovější verzi souboru **`stahovac-linux-x86_64`**.
+2. Soubor je potřeba nejdřív „odemknout" pro spuštění:
 
    **Přes grafické rozhraní:**
-   Pravé tlačítko na `stahovac` → **Vlastnosti** → záložka **Oprávnění** → zaškrtni **Povolit spouštění souboru jako programu**.
+   Pravé tlačítko na `stahovac-linux-x86_64` → **Vlastnosti** → záložka **Oprávnění** → zaškrtni **Povolit spouštění souboru jako programu**.
 
    **Přes terminál:**
    ```bash
-   chmod +x stahovac
-   ./stahovac
+   chmod +x stahovac-linux-x86_64
+   ./stahovac-linux-x86_64
    ```
-3. Poklepej na soubor `stahovac` a aplikace se spustí.
+3. Poklepej na soubor `stahovac-linux-x86_64` a aplikace se spustí.
 
 > ⚠️ Před prvním stahováním ještě nainstaluj FFmpeg — viz [sekce níže](#instalace-ffmpeg-nutný-krok).
 
 ### 🍎 macOS
 
-1. Na [stránce Releases](https://github.com/Xelvra/aether-downloader/releases) stáhni verzi pro macOS a rozbal archiv.
+1. Na [stránce Releases](https://github.com/Xelvra/aether-downloader/releases) stáhni nejnovější verzi souboru **`stahovac-macos-arm64`** (určeno pro Apple Silicon — M1 a novější).
 2. Systém aplikaci při prvním spuštění zablokuje, protože pochází od neznámého vývojáře — to je normální:
    - **Nastavení systému → Soukromí a zabezpečení**
    - Sjeď dolů, najdi hlášku o zablokované aplikaci a klikni na **Otevřít přesto**.
