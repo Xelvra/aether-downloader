@@ -29,6 +29,13 @@ _API_HEADERS = {
     "Accept": "application/json, text/plain, */*",
 }
 
+_VOD_PAGE_M3U8_RE = re.compile(r'https?://[^"\\ ]+\.m3u8\?token=[^"\\ ]+')
+
+_VOD_TITLE_RE = re.compile(r'\\"title\\":\\"([^"]*)\\"')
+_VOD_LANG_RE = re.compile(r'\\"language\\":\\"([^"]+)\\"')
+_VOD_THUMB_RE = re.compile(r'\\"thumbnail\\":\{\\"src\\":\\"([^"]+)\\"')
+_VOD_VIEWERS_RE = re.compile(r'\\"viewer_count\\":(\d+)')
+
 
 def build_opts(url: str) -> dict:
     return {"referer": "https://kick.com/"}
@@ -46,19 +53,26 @@ class KickAdapter:
         return parse_vod_url(url) is not None
 
     @staticmethod
-    def extract(url: str, cancel_check=None) -> dict | None:
-        data = fetch_vod_data(url, cancel_check=cancel_check)
+    def extract(url: str, cancel_check=None, auth_token: str | None = None) -> dict | None:
+        data = fetch_vod_data(url, cancel_check=cancel_check, **_auth_kwargs(auth_token))
         if data:
-            return build_ytdlp_info(data, cancel_check=cancel_check)
-        resolved = _resolve_vod_id(url, cancel_check=cancel_check)
+            return build_ytdlp_info(data, cancel_check=cancel_check, **_auth_kwargs(auth_token))
+        page_data = _fetch_vod_page(url, cancel_check=cancel_check, **_auth_kwargs(auth_token))
+        if page_data:
+            return build_ytdlp_info(page_data, cancel_check=cancel_check, **_auth_kwargs(auth_token))
+        resolved = _resolve_vod_id(url, cancel_check=cancel_check, **_auth_kwargs(auth_token))
         if resolved:
-            return build_ytdlp_info(resolved, cancel_check=cancel_check)
+            return build_ytdlp_info(resolved, cancel_check=cancel_check, **_auth_kwargs(auth_token))
         return None
 
 
 def _check_cancel(cancel_check) -> None:
     if cancel_check is not None and cancel_check():
         raise _KickCancelError()
+
+
+def _auth_kwargs(auth_token: str | None) -> dict:
+    return {"auth_token": auth_token} if auth_token else {}
 
 
 def parse_vod_url(url: str) -> tuple[str, str] | None:
@@ -68,10 +82,13 @@ def parse_vod_url(url: str) -> tuple[str, str] | None:
     return None
 
 
-def _api_get(path: str, timeout: int = 15, cancel_check=None) -> dict | list | None:
+def _api_get(path: str, timeout: int = 15, cancel_check=None, auth_token: str | None = None) -> dict | list | None:
     _check_cancel(cancel_check)
     ctx = make_ssl_context()
-    req = urllib.request.Request(f"{KICK_API_BASE}/{path}", headers=_API_HEADERS)
+    headers = dict(_API_HEADERS)
+    if auth_token:
+        headers["Authorization"] = f"Bearer {auth_token}"
+    req = urllib.request.Request(f"{KICK_API_BASE}/{path}", headers=headers)
     try:
         resp = urllib.request.urlopen(req, timeout=timeout, context=ctx)
         payload: dict | list | None = json.loads(resp.read().decode())
@@ -86,13 +103,46 @@ def _api_get(path: str, timeout: int = 15, cancel_check=None) -> dict | list | N
         return None
 
 
-def fetch_vod_data(url: str, cancel_check=None) -> dict | None:
+def _normalize_v1_video(resp: dict, channel: str) -> dict | None:
+    ls = resp.get("livestream") or {}
+    if not isinstance(ls, dict) or not ls.get("id"):
+        return None
+    ls_cats = ls.get("categories") or []
+    return {
+        "id": ls.get("id"),
+        "slug": ls.get("slug"),
+        "session_title": ls.get("session_title"),
+        "source": resp.get("source") or "",
+        "duration": ls.get("duration") or 0,
+        "language": ls.get("language") or "",
+        "view_count": resp.get("views") or 0,
+        "thumbnail": ls.get("thumbnail") or {},
+        "categories": ls_cats,
+        "video": {
+            "id": resp.get("id"),
+            "uuid": resp.get("uuid"),
+            "source": resp.get("source") or "",
+        },
+        "user": ls.get("user") or {},
+        "channel": channel or ls.get("slug") or "",
+    }
+
+
+def fetch_vod_data(url: str, cancel_check=None, auth_token: str | None = None) -> dict | None:
     parsed = parse_vod_url(url)
     if not parsed:
         return None
     channel, vod_id = parsed
 
-    vods = _api_get(f"v2/channels/{channel}/videos", cancel_check=cancel_check)
+    if auth_token:
+        direct = _api_get(f"v1/video/{vod_id}", cancel_check=cancel_check, auth_token=auth_token)
+        if isinstance(direct, dict):
+            normalized = _normalize_v1_video(direct, channel)
+            if normalized:
+                logger.info("Kick VOD %s resolved directly with auth", vod_id)
+                return normalized
+
+    vods = _api_get(f"v2/channels/{channel}/videos", cancel_check=cancel_check, **_auth_kwargs(auth_token))
     if not isinstance(vods, list):
         return None
 
@@ -109,13 +159,70 @@ def fetch_vod_data(url: str, cancel_check=None) -> dict | None:
     return None
 
 
-def _resolve_vod_id(url: str, cancel_check=None) -> dict | None:
+def _re_group(pattern: "re.Pattern", text: str) -> str | None:
+    m = pattern.search(text)
+    return m.group(1) if m else None
+
+
+def _fetch_vod_page(url: str, cancel_check=None, auth_token: str | None = None) -> dict | None:
+    """Fallback: sub-only Kick VODy nejsou dostupné přes `v1/video` API, ale stránka VOD
+    je (s cookies) vrátí včetně podepsaného `playback_url`. Data vytáhneme z RSC payloadu."""
     parsed = parse_vod_url(url)
     if not parsed:
         return None
     channel, vod_id = parsed
 
-    vods = _api_get(f"v2/channels/{channel}/videos", cancel_check=cancel_check)
+    page = _fetch_url(url, cancel_check=cancel_check, **_auth_kwargs(auth_token))
+    if not page:
+        return None
+
+    m3u8 = _VOD_PAGE_M3U8_RE.search(page)
+    if not m3u8:
+        logger.debug("Kick VOD page %s: playback URL not found", vod_id)
+        return None
+    source = m3u8.group(0)
+
+    obj_pat = re.compile(
+        r'\\"category\\":\{\\"id\\":(\d+),\\"name\\":\\"([^"]+)\\",\\"slug\\":\\"([^"]+)\\"\},'
+        r'\\"channel\\":\{\\"id\\":(\d+),\\"slug\\":\\"([^"]+)\\",\\"username\\":\\"([^"]+)\\"\},'
+        r'\\"duration\\":(\d+),\\"end_time\\":\\"[^"]*\\",\\"id\\":\\"' + re.escape(vod_id) + r'\\"'
+    )
+    obj = obj_pat.search(page)
+    if not obj:
+        logger.debug("Kick VOD page %s: video object not found", vod_id)
+        return None
+
+    tail = page[obj.end() : obj.end() + 2000]
+    title = _re_group(_VOD_TITLE_RE, tail)
+    category_name = obj.group(2)
+    channel_slug = obj.group(5) or channel
+    duration_ms = (int(obj.group(7) or 0)) * 1000
+
+    data = {
+        "id": vod_id,
+        "slug": title or "",
+        "session_title": title or "",
+        "source": source,
+        "duration": duration_ms,
+        "language": _re_group(_VOD_LANG_RE, tail) or "",
+        "view_count": int(_re_group(_VOD_VIEWERS_RE, tail) or 0),
+        "thumbnail": {"src": _re_group(_VOD_THUMB_RE, tail) or ""},
+        "categories": [{"name": category_name}] if category_name else [],
+        "video": {"id": "", "uuid": vod_id, "source": source},
+        "user": {"id": obj.group(4), "username": obj.group(6)},
+        "channel": channel_slug,
+    }
+    logger.info("Kick VOD %s resolved from page scrape", vod_id)
+    return data
+
+
+def _resolve_vod_id(url: str, cancel_check=None, auth_token: str | None = None) -> dict | None:
+    parsed = parse_vod_url(url)
+    if not parsed:
+        return None
+    channel, vod_id = parsed
+
+    vods = _api_get(f"v2/channels/{channel}/videos", cancel_check=cancel_check, **_auth_kwargs(auth_token))
     if not isinstance(vods, list) or not vods:
         logger.debug("No VODs found for channel %s", channel)
         return None
@@ -129,40 +236,25 @@ def _resolve_vod_id(url: str, cancel_check=None) -> dict | None:
         if not uuid:
             continue
 
-        resp = _api_get(f"v1/video/{uuid}", cancel_check=cancel_check)
+        resp = _api_get(f"v1/video/{uuid}", cancel_check=cancel_check, **_auth_kwargs(auth_token))
         if not isinstance(resp, dict):
             continue
 
         ls = resp.get("livestream") or {}
         if ls.get("vod_id") == vod_id:
             logger.info("Kick VOD %s resolved to uuid %s", vod_id, uuid)
-            ls_cats = ls.get("categories") or []
-            return {
-                "id": ls.get("id"),
-                "slug": ls.get("slug"),
-                "session_title": ls.get("session_title"),
-                "source": resp.get("source") or "",
-                "duration": ls.get("duration") or 0,
-                "language": ls.get("language") or "",
-                "view_count": resp.get("views") or 0,
-                "thumbnail": ls.get("thumbnail") or {},
-                "categories": ls_cats,
-                "video": {
-                    "id": resp.get("id"),
-                    "uuid": resp.get("uuid"),
-                    "source": resp.get("source") or "",
-                },
-                "user": ls.get("user") or {},
-                "channel": ls.get("slug") or "",
-            }
+            return _normalize_v1_video(resp, channel)
 
     logger.warning("Kick VOD %s/%s not resolved from channel VOD list", channel, vod_id)
     return None
 
 
-def _fetch_url(url: str, timeout: int = 15, cancel_check=None) -> str | None:
+def _fetch_url(url: str, timeout: int = 15, cancel_check=None, auth_token: str | None = None) -> str | None:
     _check_cancel(cancel_check)
-    req = urllib.request.Request(url, headers=_API_HEADERS)
+    headers = dict(_API_HEADERS)
+    if auth_token:
+        headers["Authorization"] = f"Bearer {auth_token}"
+    req = urllib.request.Request(url, headers=headers)
     ctx = make_ssl_context()
     try:
         resp = urllib.request.urlopen(req, timeout=timeout, context=ctx)
@@ -182,9 +274,14 @@ def _make_format(
     width: int | None,
     bandwidth: int | None,
     is_audio_only: bool = False,
+    auth_token: str | None = None,
 ) -> dict:
     fragment_base = media_url.rsplit("/", 1)[0] + "/"
     fmt_id = f"hls-{height}" if height else f"hls-{bandwidth}" if bandwidth else "hls"
+
+    http_headers = dict(_API_HEADERS)
+    if auth_token:
+        http_headers["Authorization"] = f"Bearer {auth_token}"
 
     fmt: dict = {
         "url": media_url,
@@ -195,7 +292,7 @@ def _make_format(
         "tbr": bandwidth // 1000 if bandwidth else None,
         "fragment_base_url": fragment_base,
         "manifest_url": manifest_url,
-        "http_headers": dict(_API_HEADERS),
+        "http_headers": http_headers,
     }
 
     if is_audio_only:
@@ -212,7 +309,7 @@ def _make_format(
     return fmt
 
 
-def _parse_master_playlist(content: str, base_url: str) -> list[dict]:
+def _parse_master_playlist(content: str, base_url: str, auth_token: str | None = None) -> list[dict]:
     formats: list[dict] = []
     lines = content.splitlines()
     i = 0
@@ -259,6 +356,7 @@ def _parse_master_playlist(content: str, base_url: str) -> list[dict]:
                     width=width if width else None,
                     bandwidth=bandwidth,
                     is_audio_only=is_audio_only,
+                    auth_token=auth_token,
                 )
                 formats.append(fmt)
         i += 1
@@ -266,26 +364,26 @@ def _parse_master_playlist(content: str, base_url: str) -> list[dict]:
     return formats
 
 
-def _build_hls_formats(source: str, cancel_check=None) -> list[dict]:
+def _build_hls_formats(source: str, cancel_check=None, auth_token: str | None = None) -> list[dict]:
     if not source:
         return []
 
-    playlist = _fetch_url(source, cancel_check=cancel_check)
+    playlist = _fetch_url(source, cancel_check=cancel_check, **_auth_kwargs(auth_token))
     if not playlist:
         logger.warning("Cannot fetch HLS playlist from %s, using single format", source)
-        return [_make_format(source, source, 1080, 1920, None)]
+        return [_make_format(source, source, 1080, 1920, None, auth_token=auth_token)]
 
     if "#EXT-X-STREAM-INF:" in playlist:
-        formats = _parse_master_playlist(playlist, source)
+        formats = _parse_master_playlist(playlist, source, auth_token=auth_token)
         if formats:
             logger.info("Parsed %d quality variants from master playlist", len(formats))
             return formats
         logger.warning("Master playlist had no variants, falling back to single format")
 
-    return [_make_format(source, source, 1080, 1920, None)]
+    return [_make_format(source, source, 1080, 1920, None, auth_token=auth_token)]
 
 
-def build_ytdlp_info(vod: dict, cancel_check=None) -> dict:
+def build_ytdlp_info(vod: dict, cancel_check=None, auth_token: str | None = None) -> dict:
     video = vod.get("video") or {}
     cat_list = vod.get("categories") or []
 
@@ -314,7 +412,7 @@ def build_ytdlp_info(vod: dict, cancel_check=None) -> dict:
         elif isinstance(c, str):
             categories.append(c)
 
-    formats = _build_hls_formats(source, cancel_check=cancel_check)
+    formats = _build_hls_formats(source, cancel_check=cancel_check, **_auth_kwargs(auth_token))
 
     return {
         "id": str(vod.get("id") or video.get("id") or ""),
@@ -332,6 +430,17 @@ def build_ytdlp_info(vod: dict, cancel_check=None) -> dict:
         "categories": categories,
         "formats": formats,
     }
+
+
+def _session_token_from_extractor(extractor) -> str | None:
+    """Kick `session_token` cookie z downloaderu (respektuje cookiesfrombrowser/cookiefile)."""
+    try:
+        cookies = extractor._get_cookies("https://kick.com/")
+        if "session_token" in cookies:
+            return urllib.parse.unquote(cookies["session_token"].value)
+    except Exception:
+        logger.debug("Cannot read Kick session_token cookie", exc_info=True)
+    return None
 
 
 def patch_ytdlp_extractor():
@@ -366,6 +475,7 @@ def patch_ytdlp_extractor():
         cancel_check = None
         with contextlib.suppress(AttributeError):
             cancel_check = self._downloader.params.get("_cancel_check")
+        auth_token = _session_token_from_extractor(self)
 
         try:
             return orig_extract(self, url)
@@ -373,7 +483,7 @@ def patch_ytdlp_extractor():
             logger.debug("KickVODIE v1 failed for %s: %s", video_id, e)
 
         try:
-            data = KickAdapter.extract(url, cancel_check=cancel_check)
+            data = KickAdapter.extract(url, cancel_check=cancel_check, auth_token=auth_token)
             if data:
                 return data
         except _KickCancelError:

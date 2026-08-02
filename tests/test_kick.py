@@ -66,6 +66,21 @@ class TestApiGet:
         monkeypatch.setattr(kick.urllib.request, "urlopen", boom)
         assert kick._api_get("path") is None
 
+    def test_sends_authorization_header(self, monkeypatch):
+        captured = {}
+
+        class FakeResp:
+            def read(self):
+                return b"{}"
+
+        def fake_urlopen(req, timeout=15, context=None):
+            captured["headers"] = req.headers
+            return FakeResp()
+
+        monkeypatch.setattr(kick.urllib.request, "urlopen", fake_urlopen)
+        kick._api_get("v1/video/xyz", auth_token="tok123")
+        assert captured["headers"]["Authorization"] == "Bearer tok123"
+
 
 class TestFetchUrl:
     def test_success(self, monkeypatch):
@@ -119,6 +134,104 @@ class TestFetchVodData:
         result = kick.fetch_vod_data("https://kick.com/ch/videos/abc")
         assert result is not None
         assert result["video"]["uuid"] == "abc"
+
+    def test_resolves_directly_with_auth(self, monkeypatch):
+        calls = []
+
+        def fake_get(path, cancel_check=None, auth_token=None):
+            calls.append((path, auth_token))
+            return {
+                "id": 5,
+                "source": "https://media.example.com/x.m3u8",
+                "uuid": "the-uuid",
+                "livestream": {
+                    "id": 5,
+                    "slug": "the-slug",
+                    "session_title": "Sub VOD",
+                    "duration": 1000,
+                    "user": {"id": 1, "username": "streamer"},
+                    "categories": [],
+                },
+            }
+
+        monkeypatch.setattr(kick, "_api_get", fake_get)
+        result = kick.fetch_vod_data("https://kick.com/ch/videos/the-uuid", auth_token="tok123")
+        assert result is not None
+        assert result["session_title"] == "Sub VOD"
+        assert result["channel"] == "ch"
+        assert calls == [("v1/video/the-uuid", "tok123")]
+
+    def test_no_auth_uses_channel_list(self, monkeypatch):
+        calls = []
+
+        def fake_get(path, cancel_check=None):
+            calls.append(path)
+            return [_mk_vod("abc", "123")]
+
+        monkeypatch.setattr(kick, "_api_get", fake_get)
+        result = kick.fetch_vod_data("https://kick.com/ch/videos/abc")
+        assert result is not None
+        assert calls == ["v2/channels/ch/videos"]
+
+
+class TestFetchVodPage:
+    URL = "https://kick.com/aethercosmologyczsk/videos/019fb6ea-0d60-75ca-8756-11f0d8b1f817"
+    M3U8 = (
+        "https://fa723fc1b171.us-west-2.playback.live-video.net/api/video/v1/"
+        "us-west-2.196233775518.channel.YNnlAxotHfyv.m3u8?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzM4NCJ9"
+    )
+    PAGE = (
+        '<script>self.__next_f.push([1,"'
+        r'\"category\":{\"id\":15,\"name\":\"Just Chatting\",\"slug\":\"just-chatting\"},'
+        r'\"channel\":{\"id\":50494549,\"slug\":\"aethercosmologyczsk\",\"username\":\"AetherCosmologyczsk\"},'
+        r'\"duration\":54543,\"end_time\":\"2026-07-31T21:54:21Z\",\"id\":\"019fb6ea-0d60-75ca-8756-11f0d8b1f817\",'
+        r'\"is_live\":false,\"language\":\"cs\",\"status\":\"sub_only\",'
+        r'\"thumbnail\":{\"src\":\"https://images.kick.com/thumb.webp\",\"srcSet\":\"https://images.kick.com/1080.webp 1920w\"},'
+        r'\"title\":\"#156 Sub Only Stream\",\"viewer_count\":3214}'
+        '"])</script>'
+        '<script>var x="' + M3U8 + '"</script>'
+    )
+
+    def test_extracts_sub_only_vod(self, monkeypatch):
+        monkeypatch.setattr(kick, "_fetch_url", lambda url, cancel_check=None: self.PAGE)
+        result = kick._fetch_vod_page(self.URL)
+        assert result is not None
+        assert result["session_title"] == "#156 Sub Only Stream"
+        assert result["duration"] == 54543000
+        assert result["view_count"] == 3214
+        assert result["language"] == "cs"
+        assert result["categories"] == [{"name": "Just Chatting"}]
+        assert result["channel"] == "aethercosmologyczsk"
+        assert result["user"] == {"id": "50494549", "username": "AetherCosmologyczsk"}
+        assert result["thumbnail"] == {"src": "https://images.kick.com/thumb.webp"}
+        assert result["source"] == self.M3U8
+
+    def test_invalid_url(self, monkeypatch):
+        assert kick._fetch_vod_page("https://youtube.com/watch?v=x") is None
+
+    def test_page_fetch_failure(self, monkeypatch):
+        monkeypatch.setattr(kick, "_fetch_url", lambda url, cancel_check=None: None)
+        assert kick._fetch_vod_page(self.URL) is None
+
+    def test_no_m3u8(self, monkeypatch):
+        monkeypatch.setattr(kick, "_fetch_url", lambda url, cancel_check=None: "<html>no token</html>")
+        assert kick._fetch_vod_page(self.URL) is None
+
+    def test_no_video_object(self, monkeypatch):
+        page = "<html>https://cdn.example.com/x.m3u8?token=abc</html>"
+        monkeypatch.setattr(kick, "_fetch_url", lambda url, cancel_check=None: page)
+        assert kick._fetch_vod_page(self.URL) is None
+
+    def test_forwards_auth_token_to_fetch_url(self, monkeypatch):
+        seen = {}
+
+        def fake_fetch(url, cancel_check=None, auth_token=None):
+            seen["token"] = auth_token
+            return self.PAGE
+
+        monkeypatch.setattr(kick, "_fetch_url", fake_fetch)
+        kick._fetch_vod_page(self.URL, auth_token="tok123")
+        assert seen["token"] == "tok123"
 
 
 class TestResolveVodId:
@@ -188,6 +301,23 @@ class TestResolveVodId:
     def test_invalid_url(self, monkeypatch):
         assert kick._resolve_vod_id("https://example.com/") is None
 
+    def test_forwards_auth_token(self, monkeypatch):
+        calls = []
+
+        def fake_get(path, cancel_check=None, auth_token=None):
+            calls.append((path, auth_token))
+            if path.startswith("v2/channels/"):
+                return [{"id": 1, "video": {"uuid": "u1"}}]
+            return {"livestream": {"vod_id": "abc", "id": 1, "slug": "s", "session_title": "T", "categories": []}}
+
+        monkeypatch.setattr(kick, "_api_get", fake_get)
+        result = kick._resolve_vod_id("https://kick.com/ch/videos/abc", auth_token="tok123")
+        assert result is not None
+        assert calls == [
+            ("v2/channels/ch/videos", "tok123"),
+            ("v1/video/u1", "tok123"),
+        ]
+
 
 class TestMakeFormat:
     def test_video_format(self):
@@ -223,6 +353,10 @@ class TestMakeFormat:
     def test_http_headers_copied(self):
         fmt = kick._make_format("u", "m", 720, 1280, 1)
         assert fmt["http_headers"]["Referer"] == "https://kick.com/"
+
+    def test_authorization_header_added(self):
+        fmt = kick._make_format("u", "m", 720, 1280, 1, auth_token="tok123")
+        assert fmt["http_headers"]["Authorization"] == "Bearer tok123"
 
 
 class TestParseMasterPlaylist:
@@ -298,6 +432,18 @@ class TestBuildHlsFormats:
         formats = kick._build_hls_formats("https://media.example.com/media.m3u8")
         assert len(formats) == 1
 
+    def test_passes_auth_token_to_fetch(self, monkeypatch):
+        seen = {}
+
+        def fake_fetch(url, cancel_check=None, auth_token=None):
+            seen["token"] = auth_token
+            return None
+
+        monkeypatch.setattr(kick, "_fetch_url", fake_fetch)
+        formats = kick._build_hls_formats("https://media.example.com/x.m3u8", auth_token="tok123")
+        assert seen["token"] == "tok123"
+        assert formats[0]["http_headers"]["Authorization"] == "Bearer tok123"
+
 
 class TestBuildYtdlpInfo:
     def _full_vod(self):
@@ -353,6 +499,17 @@ class TestBuildYtdlpInfo:
         info = kick.build_ytdlp_info(vod)
         assert info["categories"] == ["a", "b"]
 
+    def test_auth_token_passed_to_formats(self, monkeypatch):
+        seen = {}
+
+        def fake_build(source, cancel_check=None, auth_token=None):
+            seen["token"] = auth_token
+            return []
+
+        monkeypatch.setattr(kick, "_build_hls_formats", fake_build)
+        kick.build_ytdlp_info(self._full_vod(), auth_token="tok123")
+        assert seen["token"] == "tok123"
+
 
 class TestKickAdapter:
     def test_supports_kick_vod(self):
@@ -377,6 +534,7 @@ class TestKickAdapter:
 
     def test_extract_falls_back_to_resolve(self, monkeypatch):
         monkeypatch.setattr(kick, "fetch_vod_data", lambda url, cancel_check=None: None)
+        monkeypatch.setattr(kick, "_fetch_vod_page", lambda url, cancel_check=None: None)
 
         def fake_resolve(url, cancel_check=None):
             return {"session_title": "Resolved", "slug": "s", "source": "", "duration": 0, "categories": []}
@@ -386,10 +544,57 @@ class TestKickAdapter:
         result = kick.KickAdapter.extract("https://kick.com/ch/videos/abc")
         assert result["title"] == "Resolved"
 
+    def test_extract_uses_page_scrape(self, monkeypatch):
+        monkeypatch.setattr(kick, "fetch_vod_data", lambda url, cancel_check=None: None)
+
+        def fake_page(url, cancel_check=None):
+            return {
+                "session_title": "Page VOD",
+                "slug": "page",
+                "source": "https://cdn.example.com/x.m3u8",
+                "duration": 0,
+                "categories": [],
+            }
+
+        monkeypatch.setattr(kick, "_fetch_vod_page", fake_page)
+        monkeypatch.setattr(kick, "_build_hls_formats", lambda source, cancel_check=None: [])
+        result = kick.KickAdapter.extract("https://kick.com/ch/videos/abc")
+        assert result["title"] == "Page VOD"
+
     def test_extract_returns_none_when_unresolved(self, monkeypatch):
         monkeypatch.setattr(kick, "fetch_vod_data", lambda url, cancel_check=None: None)
+        monkeypatch.setattr(kick, "_fetch_vod_page", lambda url, cancel_check=None: None)
         monkeypatch.setattr(kick, "_resolve_vod_id", lambda url, cancel_check=None: None)
         assert kick.KickAdapter.extract("https://kick.com/ch/videos/abc") is None
+
+
+class TestSessionTokenFromExtractor:
+    @staticmethod
+    def _cookies(token=None):
+        from http.cookies import SimpleCookie
+
+        jar = SimpleCookie()
+        if token is not None:
+            jar["session_token"] = token
+        return jar
+
+    def test_reads_and_unquotes_session_token(self):
+        extractor = SimpleNamespace()
+        extractor._get_cookies = lambda url: self._cookies("secret%20token")
+        assert kick._session_token_from_extractor(extractor) == "secret token"
+
+    def test_no_cookie(self):
+        extractor = SimpleNamespace()
+        extractor._get_cookies = lambda url: self._cookies()
+        assert kick._session_token_from_extractor(extractor) is None
+
+    def test_returns_none_on_error(self):
+        def boom(url):
+            raise RuntimeError("no cookies")
+
+        extractor = SimpleNamespace()
+        extractor._get_cookies = boom
+        assert kick._session_token_from_extractor(extractor) is None
 
 
 class TestCheckYtdlpVersion:
@@ -490,6 +695,7 @@ class TestPatchYtdlpExtractor:
         try:
             kick.patch_ytdlp_extractor()
             monkeypatch.setattr(kick, "fetch_vod_data", lambda url, cancel_check=None: None)
+            monkeypatch.setattr(kick, "_fetch_vod_page", lambda url, cancel_check=None: None)
             monkeypatch.setattr(kick, "_resolve_vod_id", lambda url, cancel_check=None: None)
 
             class FakeSelf:
