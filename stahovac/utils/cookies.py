@@ -47,3 +47,37 @@ def validate_cookies_file(path: str) -> str | None:
         return "soubor neobsahuje žádné cookies."
     except OSError:
         return "soubor nelze otevřít."
+
+
+def _safari_cookie_paths() -> list[Path]:
+    home = Path.home()
+    return [
+        home / "Library" / "Cookies" / "Cookies.binarycookies",
+        home / "Library" / "Containers" / "com.apple.Safari" / "Data" / "Library" / "Cookies" / "Cookies.binarycookies",
+    ]
+
+
+def safari_cookies_readable() -> tuple[bool, str]:
+    """Zkontroluje čitelnost Safari cookies na macOS.
+
+    Databázi Safari cookies chrání na macOS TCC – bez „Plného přístupu k disku“
+    aplikace soubor sice vidí, ale otevřít ho nesmí (PermissionError), takže
+    sub-only videa na Kicku/Twitchi končí jako „not found“. Vrací (čitelnost,
+    zpráva), aby aplikace mohla uživatele nasměrovat.
+    """
+    for path in _safari_cookie_paths():
+        if path.is_file():
+            try:
+                with open(path, "rb") as f:
+                    f.read(64)
+                return True, ""
+            except OSError:
+                return False, (
+                    "Safari cookies se nepodařilo přečíst – povol aplikaci "
+                    "„Plný přístup k disku“ (Systémové nastavení → Soukromí a zabezpečení) "
+                    "a aplikaci restartuj, nebo vyber Chrome/Firefox nebo cookies.txt."
+                )
+    return False, (
+        "Databáze cookies Safari nebyla nalezena – přihlas se na kick.com v Safari "
+        "a aplikaci restartuj, nebo vyber Chrome/Firefox nebo cookies.txt."
+    )

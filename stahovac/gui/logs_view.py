@@ -9,6 +9,7 @@ from stahovac.gui.theme import (
     COLOR_SURFACE,
     COLOR_TEXT,
     COLOR_TEXT_SECONDARY,
+    ICON_SIZE,
     sz,
 )
 from stahovac.storage.history import HistoryManager
@@ -96,7 +97,7 @@ class LogsView:
                             [
                                 ft.Icon(
                                     ft.Icons.PLAY_CIRCLE_OUTLINED,
-                                    size=sz(22),
+                                    size=ICON_SIZE,
                                     color=COLOR_ACCENT,
                                 ),
                                 ft.Column(
@@ -121,20 +122,7 @@ class LogsView:
                                     expand=True,
                                     spacing=sz(2),
                                 ),
-                                ft.IconButton(
-                                    icon=ft.Icons.PLAY_CIRCLE_OUTLINED,
-                                    icon_color=COLOR_SUCCESS,
-                                    icon_size=sz(18),
-                                    tooltip="Otevřít video",
-                                    on_click=lambda e, p=item.get("file_path", ""): self._open_history_item(p),  # noqa: B008
-                                ),
-                                ft.IconButton(
-                                    icon=ft.Icons.FOLDER_OPEN_ROUNDED,
-                                    icon_color=COLOR_ACCENT,
-                                    icon_size=sz(18),
-                                    tooltip="Otevřít složku",
-                                    on_click=lambda e, p=item.get("file_path", ""): self._reveal_history_item(p),  # noqa: B008
-                                ),
+                                self._history_action_buttons(item),
                             ],
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         ),
@@ -143,6 +131,28 @@ class LogsView:
                         bgcolor=COLOR_SURFACE,
                     )
                 )
+
+    def _history_action_buttons(self, item: dict) -> ft.Row:
+        file_path = item.get("file_path", "")
+        return ft.Row(
+            [
+                ft.IconButton(
+                    icon=ft.Icons.FOLDER_OPEN_ROUNDED,
+                    icon_color=COLOR_ACCENT,
+                    icon_size=ICON_SIZE,
+                    tooltip="Otevřít složku",
+                    on_click=lambda e: self._reveal_history_item(file_path),
+                ),
+                ft.IconButton(
+                    icon=ft.Icons.PLAY_CIRCLE_OUTLINED,
+                    icon_color=COLOR_SUCCESS,
+                    icon_size=ICON_SIZE,
+                    tooltip="Otevřít video",
+                    on_click=lambda e: self._open_history_item(file_path),
+                ),
+            ],
+            spacing=sz(8),
+        )
 
     def _open_history_item(self, file_path: str) -> None:
         ok, message = open_path(file_path)

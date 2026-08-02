@@ -451,6 +451,21 @@ def _session_token_from_extractor(extractor) -> str | None:
     return None
 
 
+def _cookie_source_hint(extractor) -> str:
+    """Nápověda do chybové hlášky, když chybí session_token kvůli nečitelným cookies."""
+    try:
+        params = extractor._downloader.params or {}
+        browser = params.get("cookiesfrombrowser")
+        if browser and isinstance(browser, (list, tuple)) and str(browser[0]).lower() == "safari":
+            return (
+                " (cookies Safari se nepodařilo načíst – povol aplikaci „Plný přístup k disku“ "
+                "v Systémovém nastavení, nebo zvol Chrome/Firefox/cookies.txt)"
+            )
+    except Exception:
+        pass
+    return ""
+
+
 def patch_ytdlp_extractor():
     try:
         from yt_dlp.extractor.kick import KickVODIE
@@ -502,7 +517,7 @@ def patch_ytdlp_extractor():
         from yt_dlp.utils import ExtractorError
 
         raise ExtractorError(
-            f"Kick VOD {video_id} not found (deleted or unavailable)",
+            f"Kick VOD {video_id} not found (deleted or unavailable){_cookie_source_hint(self)}",
             expected=True,
         )
 

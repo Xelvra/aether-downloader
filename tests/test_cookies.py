@@ -1,5 +1,8 @@
+import builtins
+
+import stahovac.utils.cookies as cookies_mod
 from stahovac.config.constants import COOKIES_FILE_OPTION, COOKIES_NONE
-from stahovac.utils.cookies import resolve_cookies_opts, validate_cookies_file
+from stahovac.utils.cookies import resolve_cookies_opts, safari_cookies_readable, validate_cookies_file
 
 
 class TestResolveCookiesOpts:
@@ -94,3 +97,38 @@ class TestValidateCookiesFile:
         cookie_file = tmp_path / "cookies.txt"
         cookie_file.write_text("", encoding="utf-8")
         assert validate_cookies_file(str(cookie_file)) is not None
+
+
+class TestSafariCookiesReadable:
+    def test_cookie_paths(self):
+        paths = cookies_mod._safari_cookie_paths()
+        assert len(paths) == 2
+        assert paths[0].name == "Cookies.binarycookies"
+        assert paths[1].name == "Cookies.binarycookies"
+
+    def test_no_database(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(cookies_mod, "_safari_cookie_paths", lambda: [tmp_path / "none" / "a"])
+        ok, message = safari_cookies_readable()
+        assert ok is False
+        assert "nebyla nalezena" in message
+
+    def test_readable_database(self, monkeypatch, tmp_path):
+        db = tmp_path / "Cookies.binarycookies"
+        db.write_bytes(b"cook")
+        monkeypatch.setattr(cookies_mod, "_safari_cookie_paths", lambda: [db])
+        ok, message = safari_cookies_readable()
+        assert ok is True
+        assert message == ""
+
+    def test_permission_denied(self, monkeypatch, tmp_path):
+        db = tmp_path / "Cookies.binarycookies"
+        db.write_bytes(b"cook")
+
+        def fake_open(path, mode, *args, **kwargs):
+            raise PermissionError("TCC denied")
+
+        monkeypatch.setattr(cookies_mod, "_safari_cookie_paths", lambda: [db])
+        monkeypatch.setattr(builtins, "open", fake_open)
+        ok, message = safari_cookies_readable()
+        assert ok is False
+        assert "Plný přístup k disku" in message

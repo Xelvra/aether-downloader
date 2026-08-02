@@ -34,6 +34,10 @@ def sz_at(base: int, scale: float) -> int:
     return int(base * scale)
 
 
+ICON_SIZE = sz(20)
+ICON_SIZE_LARGE = sz(24)
+
+
 COLOR_PRIMARY = "#4A90D9"
 COLOR_ACCENT = "#64B5F6"
 COLOR_SURFACE = "#1E1E2E"

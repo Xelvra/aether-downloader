@@ -727,6 +727,25 @@ class TestSessionTokenFromExtractor:
         assert kick._session_token_from_extractor(extractor) is None
 
 
+class TestCookieSourceHint:
+    def test_empty_without_downloader(self):
+        extractor = SimpleNamespace()
+        assert kick._cookie_source_hint(extractor) == ""
+
+    def test_empty_without_params(self):
+        extractor = SimpleNamespace(_downloader=SimpleNamespace(params=None))
+        assert kick._cookie_source_hint(extractor) == ""
+
+    def test_hint_for_safari(self):
+        extractor = SimpleNamespace(_downloader=SimpleNamespace(params={"cookiesfrombrowser": ("safari",)}))
+        hint = kick._cookie_source_hint(extractor)
+        assert "Plný přístup k disku" in hint
+
+    def test_no_hint_for_other_browsers(self):
+        extractor = SimpleNamespace(_downloader=SimpleNamespace(params={"cookiesfrombrowser": ("chrome",)}))
+        assert kick._cookie_source_hint(extractor) == ""
+
+
 class TestCheckYtdlpVersion:
     def test_current_version_no_warning(self, monkeypatch, caplog):
         monkeypatch.setattr("yt_dlp.version.__version__", "2026.07.04")

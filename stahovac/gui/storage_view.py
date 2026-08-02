@@ -17,6 +17,7 @@ from stahovac.gui.theme import (
     COLOR_TEXT,
     COLOR_TEXT_SECONDARY,
     COLOR_WARN,
+    ICON_SIZE,
     sz,
 )
 from stahovac.utils.paths import get_base_dir
@@ -73,7 +74,7 @@ class StorageView:
                 ft.IconButton(
                     icon=ft.Icons.FILE_OPEN_ROUNDED,
                     icon_color=COLOR_PRIMARY,
-                    icon_size=sz(20),
+                    icon_size=ICON_SIZE,
                     on_click=self._select_cookies_file,
                 ),
             ],
@@ -87,14 +88,14 @@ class StorageView:
         open_btn = ft.IconButton(
             icon=ft.Icons.FOLDER_OPEN_ROUNDED,
             icon_color=COLOR_PRIMARY,
-            icon_size=sz(20),
+            icon_size=ICON_SIZE,
             tooltip="Vybrat složku",
             on_click=self._pick_folder,
         )
         launch_btn = ft.IconButton(
             icon=ft.Icons.LAUNCH_ROUNDED,
             icon_color=COLOR_SUCCESS,
-            icon_size=sz(20),
+            icon_size=ICON_SIZE,
             tooltip="Otevřít v průzkumníku",
             on_click=self._open_output_folder,
         )

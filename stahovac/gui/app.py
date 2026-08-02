@@ -1,3 +1,4 @@
+import platform
 import threading
 import time
 import traceback
@@ -5,7 +6,13 @@ import traceback
 import flet as ft
 
 import stahovac.gui.theme as th
-from stahovac.config.constants import APP_TITLE, COOKIES_FILE_OPTION, FORMAT_MP4, VERSION_DISPLAY
+from stahovac.config.constants import (
+    APP_TITLE,
+    COOKIES_FILE_OPTION,
+    FORMAT_MP4,
+    VERSION_DISPLAY,
+    CookieSource,
+)
 from stahovac.core import ffmpeg
 from stahovac.core.validator import is_valid_url, validate_crf, validate_time_range
 from stahovac.downloader import DownloadManager
@@ -24,10 +31,13 @@ from stahovac.gui.theme import (
     COLOR_SURFACE,
     COLOR_TEXT_SECONDARY,
     COLOR_WARN,
+    ICON_SIZE,
+    ICON_SIZE_LARGE,
     sz,
 )
 from stahovac.models import DownloadParams
-from stahovac.utils.cookies import validate_cookies_file
+from stahovac.platforms import _platform_for
+from stahovac.utils.cookies import safari_cookies_readable, validate_cookies_file
 
 
 class GuiApp:
@@ -275,7 +285,7 @@ class GuiApp:
             ft.IconButton(
                 icon=ft.Icons.MENU,
                 icon_color=COLOR_PRIMARY,
-                icon_size=sz(24),
+                icon_size=ICON_SIZE,
                 tooltip="Menu",
                 on_click=self._open_drawer,
             )
@@ -317,7 +327,7 @@ class GuiApp:
                         content=ft.IconButton(
                             icon=ft.Icons.HELP_OUTLINE,
                             icon_color=COLOR_TEXT_SECONDARY,
-                            icon_size=sz(22),
+                            icon_size=ICON_SIZE_LARGE,
                             tooltip="Nápověda",
                             on_click=self._show_help,
                         ),
@@ -708,6 +718,8 @@ class GuiApp:
             self.on_status("Neplatná URL: Zadej platný odkaz na video.", COLOR_WARN)
             self._force_unlock_ui()
             return
+        if self._safari_cookies_blocking(url):
+            return
         quality_params = self.quality_view.to_params()
         if not quality_params["whole_video"]:
             error = validate_time_range(
@@ -746,6 +758,25 @@ class GuiApp:
         except (TypeError, ValueError):
             return 23
         return crf if 0 <= crf <= 51 else 23
+
+    def _safari_cookies_blocking(self, url: str) -> bool:
+        """Zablokuje stahování, když Safari cookies nejdou načíst a platforma
+        (Kick/Twitch) je vyžaduje. Vrátí True a zobrazí srozumitelnou hlášku."""
+        if platform.system() != "Darwin":
+            return False
+        if self._config.get("cookies_source") != CookieSource.SAFARI.value:
+            return False
+        module = _platform_for(url)
+        if module is None:
+            return False
+        if any(host in module.hosts for host in ("youtube.com", "youtu.be")):
+            return False
+        ok, message = safari_cookies_readable()
+        if ok:
+            return False
+        self.on_status(f"Safari: {message}", COLOR_WARN)
+        self._force_unlock_ui()
+        return True
 
     def _do_start_download(self, params: DownloadParams):
         self._pending_download = None
@@ -799,6 +830,10 @@ class GuiApp:
             if cookie_error:
                 self.on_status(f"Cookies: {cookie_error}", COLOR_WARN)
                 return
+        if platform.system() == "Darwin" and cookies_source == CookieSource.SAFARI.value:
+            ok, safari_message = safari_cookies_readable()
+            if not ok:
+                self.on_status(f"Safari cookies: {safari_message}", COLOR_WARN)
         self._manager.state.update_config_from_ui(
             quality, fmt, output_folder, cookies_source, cookies_file_path, re_encode, crf, preset
         )

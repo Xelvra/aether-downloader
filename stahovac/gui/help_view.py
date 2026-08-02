@@ -1,6 +1,13 @@
 import flet as ft
 
-from stahovac.gui.theme import COLOR_ACCENT, COLOR_SURFACE, COLOR_TEXT, COLOR_TEXT_SECONDARY, sz
+from stahovac.gui.theme import (
+    COLOR_ACCENT,
+    COLOR_SURFACE,
+    COLOR_TEXT,
+    COLOR_TEXT_SECONDARY,
+    ICON_SIZE_LARGE,
+    sz,
+)
 
 
 def _section(title: str, *items: str) -> ft.Column:
@@ -215,7 +222,7 @@ def build_help_content(dismiss_callback) -> ft.Container:
         content=ft.IconButton(
             icon=ft.Icons.CLOSE,
             icon_color=COLOR_TEXT_SECONDARY,
-            icon_size=sz(24),
+            icon_size=ICON_SIZE_LARGE,
             on_click=lambda e: dismiss_callback(),
         ),
         right=sz(8),
