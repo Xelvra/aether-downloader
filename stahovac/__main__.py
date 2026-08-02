@@ -71,7 +71,10 @@ def _is_headless() -> bool:
     return not bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
 
 
-_SMOKE_HOSTS = ("https://www.google.com/", "https://github.com/", "https://johnvansickle.com/ffmpeg/")
+_SMOKE_HOSTS = ("https://www.google.com/", "https://github.com/")
+_SMOKE_HOSTS_BEST_EFFORT = ("https://johnvansickle.com/ffmpeg/",)
+_SMOKE_RETRIES = 3
+_SMOKE_TIMEOUT = 15
 
 _ANTI_BOT_MARKERS = (
     "sign in to confirm",
@@ -105,10 +108,10 @@ def _run_checks(url: str | None, output: str | None) -> int:
     results: list[dict] = []
     ok = True
 
-    def record(name: str, success: bool, detail: str = "") -> None:
+    def record(name: str, success: bool, detail: str = "", fatal: bool = True) -> None:
         nonlocal ok
         results.append({"name": name, "ok": bool(success), "detail": detail})
-        if not success:
+        if not success and fatal:
             ok = False
 
     try:
@@ -119,17 +122,27 @@ def _run_checks(url: str | None, output: str | None) -> int:
     except Exception as exc:  # pragma: no cover
         record("certifi-cafile", False, f"{type(exc).__name__}: {exc}")
 
+    def _check_host(host: str, fatal: bool) -> None:
+        last_detail = "timeout"
+        for _ in range(_SMOKE_RETRIES):
+            req = urllib.request.Request(host, headers={"User-Agent": "AetherDownloader-selfcheck/1.0"})
+            try:
+                with urllib.request.urlopen(req, timeout=_SMOKE_TIMEOUT, context=make_ssl_context()) as resp:
+                    record(f"tls:{host}", True, f"HTTP {resp.status}", fatal=fatal)
+                    return
+            except urllib.error.HTTPError as exc:
+                record(f"tls:{host}", True, f"HTTP {exc.code} (TLS OK)", fatal=fatal)
+                return
+            except (ssl.SSLCertVerificationError, ssl.SSLError, urllib.error.URLError) as exc:
+                last_detail = f"{type(exc).__name__}: {exc}"
+            except Exception as exc:  # pragma: no cover
+                last_detail = f"{type(exc).__name__}: {exc}"
+        record(f"tls:{host}", False, last_detail, fatal=fatal)
+
     for host in _SMOKE_HOSTS:
-        req = urllib.request.Request(host, headers={"User-Agent": "AetherDownloader-selfcheck/1.0"})
-        try:
-            with urllib.request.urlopen(req, timeout=15, context=make_ssl_context()) as resp:
-                record(f"tls:{host}", True, f"HTTP {resp.status}")
-        except urllib.error.HTTPError as exc:
-            record(f"tls:{host}", True, f"HTTP {exc.code} (TLS OK)")
-        except (ssl.SSLCertVerificationError, ssl.SSLError, urllib.error.URLError) as exc:
-            record(f"tls:{host}", False, f"{type(exc).__name__}: {exc}")
-        except Exception as exc:  # pragma: no cover
-            record(f"tls:{host}", False, f"{type(exc).__name__}: {exc}")
+        _check_host(host, fatal=True)
+    for host in _SMOKE_HOSTS_BEST_EFFORT:
+        _check_host(host, fatal=False)
 
     if url:
         try:
