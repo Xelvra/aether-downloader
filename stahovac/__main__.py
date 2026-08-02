@@ -6,7 +6,7 @@ from pathlib import Path
 import flet as ft
 
 from stahovac.platforms import patch_platform_extractors
-from stahovac.utils.paths import set_base_dir
+from stahovac.utils.paths import get_frozen_base_dir, migrate_bundle_data, set_base_dir
 
 
 def _noop():
@@ -44,7 +44,9 @@ def _setup_runtime() -> None:
     patch_platform_extractors()
 
     if getattr(sys, "frozen", False):
-        set_base_dir(Path(sys.executable).parent.absolute())
+        base = get_frozen_base_dir()
+        set_base_dir(base)
+        migrate_bundle_data(base)
     else:
         set_base_dir(Path(__file__).resolve().parent.parent)
 

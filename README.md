@@ -75,6 +75,8 @@ Podrobný postup pro konkrétní systém najdeš níže.
 
 > ⚠️ Před prvním stahováním ještě nainstaluj FFmpeg — viz [sekce níže](#instalace-ffmpeg-nutný-krok).
 
+> 📂 Stažená videa a nastavení se ukládají do **`~/Library/Application Support/AetherDownloader/`** — ne do samotné aplikace. Složku si můžeš změnit v Nastavení.
+
 ### 📱 Android (pro pokročilejší uživatele)
 
 Pro Android neexistuje hotová aplikace ke stažení — spouští se přes Termux ze zdrojového kódu a otevírá se v prohlížeči.
