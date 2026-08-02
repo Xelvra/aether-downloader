@@ -1,0 +1,142 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aether-downloader"
+dynamic = ["version"]
+description = "GUI nástroj v aplikaci Flet pro stahování a ořez videí z YouTube, Kick, Twitch a dalších platforem."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "AetherCosmologyczsk" }
+]
+keywords = [
+    "downloader",
+    "video-downloader",
+    "yt-dlp",
+    "ffmpeg",
+    "flet",
+    "gui",
+    "youtube",
+    "twitch",
+    "kick"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video",
+]
+
+dependencies = [
+    "flet>=0.86.0,<1.0.0",
+    "flet-desktop>=0.86.0,<1.0.0",
+    "flet-web>=0.86.0,<1.0.0",
+    "yt-dlp>=2024.12.0,<2027.0",
+    "yt-dlp-ejs>=0.8.0",
+    "curl-cffi>=0.10,<0.16",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.8.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.3.0",
+    "pyinstaller>=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Xelvra/aether-downloader"
+Repository = "https://github.com/Xelvra/aether-downloader.git"
+Issues = "https://github.com/Xelvra/aether-downloader/issues"
+
+[project.scripts]
+aether-downloader = "stahovac.__main__:entry"
+
+[tool.setuptools.dynamic]
+version = { attr = "stahovac.config.constants.APP_VERSION" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["stahovac*"]
+
+# ------------------------------------------------------------------------------
+# Ruff (Linter & Formatter)
+# ------------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+src = ["stahovac"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort (řazení importů)
+    "N",   # naming conventions
+    "UP",  # pyupgrade (modernizace Python syntaxe)
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501", # Ignorovat příliš dlouhé řádky (řeší formatter)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["stahovac"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+# ------------------------------------------------------------------------------
+# Mypy (Static Type Checker)
+# ------------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.10"
+files = ["stahovac"]
+warn_return_any = true
+warn_unused_configs = true
+check_untyped_defs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+show_error_codes = true
+
+# ------------------------------------------------------------------------------
+# Pytest (Testing Framework)
+# ------------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
+pythonpath = ["."]
+
+# ------------------------------------------------------------------------------
+# Coverage
+# ------------------------------------------------------------------------------
+[tool.coverage.run]
+source = ["stahovac"]
+omit = [
+    "stahovac/__main__.py",
+    "stahovac/app.py",
+    "stahovac/main.py",
+    "stahovac/gui/*",
+    "stahovac/__init__.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
+precision = 1

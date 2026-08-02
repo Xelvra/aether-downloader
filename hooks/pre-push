@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Pre-push hook: spouští stejné kontroly, jaké běží v GitHub CI, ještě než se
+# cokoli odešle na remote. Dokud kontroly neprojdou, push se nezapne.
+#
+# Kontroly:
+#   1. uv sync --locked --extra dev   synchronizace závislostí (lockfile)
+#   2. ruff check .                   linter
+#   3. ruff format --check .          formátování
+#   4. mypy stahovac                  statická typová kontrola
+#   5. pytest --cov=stahovac          testy + pokrytí (práh 80 %)
+#   6. build.py --onefile             build smoke test (binárka)
+#
+# Build smoke test se dá přeskočit proměnnou AETHER_HOOK_SKIP_BUILD=1
+# (např. když jen rychle posíláš drobnou opravu).
+#
+# Instalace (jednou za klon): git config core.hooksPath hooks
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+if ! command -v uv >/dev/null 2>&1; then
+    echo "CHYBA: nástroj uv nebyl nalezen v PATH. Push spusť z terminálu." >&2
+    exit 1
+fi
+
+skip_build="${AETHER_HOOK_SKIP_BUILD:-0}"
+
+echo "== Pre-push: kontroly (parita s GitHub CI) =="
+
+echo ""
+echo "[1/6] Synchronizace závislostí: uv sync --locked --extra dev"
+uv sync --locked --extra dev
+
+echo ""
+echo "[2/6] Linter: ruff check ."
+uv run ruff check .
+
+echo ""
+echo "[3/6] Formátování: ruff format --check ."
+uv run ruff format --check .
+
+echo ""
+echo "[4/6] Typová kontrola: mypy stahovac"
+uv run mypy stahovac
+
+echo ""
+echo "[5/6] Testy + pokrytí: pytest --cov=stahovac --cov-report=term-missing"
+uv run pytest --cov=stahovac --cov-report=term-missing
+
+if [[ "$skip_build" != "1" ]]; then
+    echo ""
+    echo "[6/6] Build smoke test: build.py --onefile"
+    uv run python build.py --onefile
+    if [[ ! -x dist/stahovac ]]; then
+        echo "CHYBA: binárka dist/stahovac nebyla vytvořena." >&2
+        exit 1
+    fi
+    echo "Binárka dist/stahovac OK"
+else
+    echo ""
+    echo "[6/6] Build smoke test přeskočen (AETHER_HOOK_SKIP_BUILD=1)"
+fi
+
+echo ""
+echo "== Pre-push: všechny kontroly proběhly v pořádku =="
