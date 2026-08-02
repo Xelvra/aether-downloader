@@ -63,10 +63,15 @@ Podrobný postup pro konkrétní systém najdeš níže.
 
 ### 🍎 macOS
 
-1. Na [stránce Releases](https://github.com/Xelvra/aether-downloader/releases) stáhni nejnovější verzi souboru **`stahovac-macos-arm64`** (určeno pro Apple Silicon — M1 a novější).
-2. Systém aplikaci při prvním spuštění zablokuje, protože pochází od neznámého vývojáře — to je normální:
-   - **Nastavení systému → Soukromí a zabezpečení**
-   - Sjeď dolů, najdi hlášku o zablokované aplikaci a klikni na **Otevřít přesto**.
+1. Na [stránce Releases](https://github.com/Xelvra/aether-downloader/releases) stáhni nejnovější verzi **podle procesoru svého Macu**:
+   - **Apple Silicon** (M1, M2, M3, M4 a novější) → soubor **`stahovac-macos-arm64.app.zip`**
+   - **Intel** → soubor **`stahovac-macos-x86_64.app.zip`**
+
+   > Nevíš, jaký procesor máš? Otevři **menu  (vlevo nahoře) → O tomto Macu**. U Apple Silicon je uvedeno „Apple M1/M2/M3/M4…", u Intelu „Intel…".
+2. Rozbal stažený ZIP (poklepej na něj) a přesuň aplikaci **`stahovac.app`** do složky **Aplikace**.
+3. Při prvním spuštění systém aplikaci zablokuje, protože pochází od neznámého vývojáře — to je normální:
+   - **Pravé tlačítko na `stahovac.app` → Otevřít → Otevřít**, nebo
+   - **Nastavení systému → Soukromí a zabezpečení** → sjeď dolů, najdi hlášku o zablokované aplikaci a klikni na **Otevřít přesto**.
 
 > ⚠️ Před prvním stahováním ještě nainstaluj FFmpeg — viz [sekce níže](#instalace-ffmpeg-nutný-krok).
 

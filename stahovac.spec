@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
+import sys
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_all
@@ -72,6 +73,15 @@ if _build_mode == "onedir":
         upx_exclude=[],
         name='stahovac',
     )
+    # Na macOS zabalíme COLLECT do .app bundle – jinak Finder otevírá holý
+    # executable jako text („zobrazí se kód") a nejde ho spustit dvojklikem.
+    if sys.platform == 'darwin':
+        app = BUNDLE(
+            coll,
+            name='stahovac.app',
+            icon=None,
+            bundle_identifier='cz.stahovac.desktop',
+        )
 else:
     exe = EXE(
         pyz,

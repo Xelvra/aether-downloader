@@ -17,10 +17,16 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact: stahovac-linux-x86_64
+            macos_app: false
           - os: windows-latest
             artifact: stahovac-windows-x86_64
+            macos_app: false
           - os: macos-latest
             artifact: stahovac-macos-arm64
+            macos_app: true
+          - os: macos-15-intel
+            artifact: stahovac-macos-x86_64
+            macos_app: true
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -40,14 +46,25 @@ jobs:
       - name: Install system deps (Windows)
         if: runner.os == 'Windows'
         run: choco install ffmpeg -y
-      - name: Build onefile
-        run: uv run python build.py --onefile
+      - name: Build binary
+        run: |
+          if [ "${{ matrix.macos_app }}" = "true" ]; then
+            uv run python build.py --onedir
+          else
+            uv run python build.py --onefile
+          fi
       - name: Smoke test binary (TLS/CA + yt-dlp)
         shell: pwsh
         env:
           SMOKE_URL: "https://www.youtube.com/watch?v=jNQXAC9IVRw"
         run: |
-          $bin = if ($env:RUNNER_OS -eq "Windows") { "dist/stahovac.exe" } else { "dist/stahovac" }
+          if ($env:RUNNER_OS -eq "Windows") {
+            $bin = "dist/stahovac.exe"
+          } elseif ($env:RUNNER_OS -eq "macOS") {
+            $bin = "dist/stahovac.app/Contents/MacOS/stahovac"
+          } else {
+            $bin = "dist/stahovac"
+          }
           & $bin --check --check-url $env:SMOKE_URL --check-output "$PWD/check.json"
           $rc = $LASTEXITCODE
           if (Test-Path "$PWD/check.json") { Get-Content "$PWD/check.json" | Write-Output }
@@ -56,7 +73,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p stage
-          if [ "$RUNNER_OS" = "Windows" ]; then
+          if [ "${{ matrix.macos_app }}" = "true" ]; then
+            ditto -c -k --keepParent dist/stahovac.app "stage/${{ matrix.artifact }}.app.zip"
+          elif [ "$RUNNER_OS" = "Windows" ]; then
             cp dist/stahovac.exe "stage/${{ matrix.artifact }}.exe"
           else
             cp dist/stahovac "stage/${{ matrix.artifact }}"

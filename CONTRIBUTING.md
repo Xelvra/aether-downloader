@@ -296,8 +296,11 @@ Pro spuštění CI musí být `uv.lock` v synchronizaci s `pyproject.toml` (kont
 
 `.github/workflows/release.yml` se spouští při push tagu `v*` (např. `v1.2.0`):
 
-1. sestaví onefile binárku na **Linuxu, Windows a macOS** (artefakty na GitHub Actions),
+1. sestaví onefile binárku na **Linuxu a Windowsu** a na **macOS** aplikaci **`.app`** pro **Apple Silicon i Intel** (artefakty na GitHub Actions),
 2. vytvoří **GitHub Release** s binárkami a automaticky generovanými poznámkami (od commitů od minulého tagu).
+
+Na macOS se build spouští s `--onedir` (zabalí se do `stahovac.app`), na Linuxu/Windowsu s `--onefile`. Architektura:
+`macos-latest` (Apple Silicon) → `stahovac-macos-arm64.app.zip`, `macos-15-intel` (Intel) → `stahovac-macos-x86_64.app.zip`.
 
 Před tagem lokálně ověř:
 

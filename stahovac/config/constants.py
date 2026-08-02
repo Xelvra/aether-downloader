@@ -1,7 +1,7 @@
 from enum import Enum
 
 APP_TITLE = "Aether Downloader"
-APP_VERSION = "1.2.3"
+APP_VERSION = "1.2.4"
 VERSION_DISPLAY = f"v{APP_VERSION} Beta"
 CONFIG_FILE_NAME = "config.json"
 HISTORY_FILE_NAME = "history.json"
