@@ -21,6 +21,14 @@ class TestPaths:
         assert isinstance(path, Path)
         assert path.exists()
 
+    def test_get_base_dir_frozen(self, monkeypatch):
+        set_base_dir(None)
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(
+            "stahovac.utils.paths.get_frozen_base_dir", lambda: Path("/frozen/base")
+        )
+        assert get_base_dir() == Path("/frozen/base")
+
 
 class TestFrozenBaseDir:
     def test_app_bundle_uses_application_support(self, monkeypatch):
@@ -89,3 +97,30 @@ class TestMigrateBundleData:
 
         migrate_bundle_data(target)
         assert (target / "config.json").read_text(encoding="utf-8") == '{"keep": true}'
+
+    def test_old_dir_equals_target_is_noop(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        target = tmp_path / "support"
+        target.mkdir(parents=True)
+        monkeypatch.setattr(sys, "executable", str(target / "stahovac"))
+        migrate_bundle_data(target)
+        assert target.is_dir()
+
+    def test_copy_oserror_suppressed(self, tmp_path, monkeypatch):
+        bundle = tmp_path / "app.app" / "Contents" / "MacOS"
+        bundle.mkdir(parents=True)
+        (bundle / "config.json").write_text("{}", encoding="utf-8")
+
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "executable", str(bundle / "stahovac"))
+
+        def bad_copy2(*a, **k):
+            raise OSError("denied")
+
+        import stahovac.utils.paths as paths_mod
+
+        monkeypatch.setattr(paths_mod.shutil, "copy2", bad_copy2)
+        target = tmp_path / "support"
+        migrate_bundle_data(target)
+        assert target.is_dir()
+        assert not (target / "config.json").exists()

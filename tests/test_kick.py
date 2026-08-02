@@ -81,6 +81,34 @@ class TestApiGet:
         kick._api_get("v1/video/xyz", auth_token="tok123")
         assert captured["headers"]["Authorization"] == "Bearer tok123"
 
+    def test_cancel_error_from_urlopen_reraised(self, monkeypatch):
+        def boom(*a, **k):
+            raise kick._KickCancelError()
+
+        monkeypatch.setattr(kick.urllib.request, "urlopen", boom)
+        with pytest.raises(kick._KickCancelError):
+            kick._api_get("v1/video/xyz")
+
+
+class TestNormalizeV1Video:
+    def test_missing_id_returns_none(self):
+        assert kick._normalize_v1_video({"livestream": {"slug": "x"}}, "ch") is None
+
+    def test_livestream_not_dict_returns_none(self):
+        assert kick._normalize_v1_video({"livestream": []}, "ch") is None
+
+    def test_valid_returns_normalized(self):
+        resp = {
+            "livestream": {"id": 7, "slug": "ch", "session_title": "T", "duration": 5000},
+            "source": "https://media.example.com/x.m3u8",
+            "views": 10,
+        }
+        result = kick._normalize_v1_video(resp, "ch")
+        assert result is not None
+        assert result["id"] == 7
+        assert result["slug"] == "ch"
+        assert result["duration"] == 5000
+
 
 class TestFetchUrl:
     def test_success(self, monkeypatch):
@@ -97,6 +125,29 @@ class TestFetchUrl:
 
         monkeypatch.setattr(kick.urllib.request, "urlopen", boom)
         assert kick._fetch_url("https://example.com/playlist.m3u8") is None
+
+    def test_sends_authorization_header(self, monkeypatch):
+        captured = {}
+
+        class FakeResp:
+            def read(self):
+                return b"ok"
+
+        def fake_urlopen(req, timeout=15, context=None):
+            captured["headers"] = req.headers
+            return FakeResp()
+
+        monkeypatch.setattr(kick.urllib.request, "urlopen", fake_urlopen)
+        kick._fetch_url("https://example.com/playlist.m3u8", auth_token="tok123")
+        assert captured["headers"]["Authorization"] == "Bearer tok123"
+
+    def test_cancel_error_from_urlopen_reraised(self, monkeypatch):
+        def boom(*a, **k):
+            raise kick._KickCancelError()
+
+        monkeypatch.setattr(kick.urllib.request, "urlopen", boom)
+        with pytest.raises(kick._KickCancelError):
+            kick._fetch_url("https://example.com/playlist.m3u8")
 
 
 def _mk_vod(uuid, vod_id, title="Some VOD"):
@@ -318,6 +369,29 @@ class TestResolveVodId:
             ("v1/video/u1", "tok123"),
         ]
 
+    def test_skips_non_dict_and_missing_uuid(self, monkeypatch):
+        vods = [
+            "junk",
+            {"id": 1, "video": {}},
+            {"id": 2, "video": {"uuid": "u2"}},
+        ]
+
+        def fake_get(path, cancel_check=None):
+            if path.startswith("v2/channels/"):
+                return vods
+            return {
+                "id": 99,
+                "uuid": "u2",
+                "source": "https://media.example.com/s.m3u8",
+                "views": 3,
+                "livestream": {"vod_id": "abc", "id": 7, "slug": "ch", "session_title": "T", "duration": 0, "categories": []},
+            }
+
+        monkeypatch.setattr(kick, "_api_get", fake_get)
+        result = kick._resolve_vod_id("https://kick.com/ch/videos/abc")
+        assert result is not None
+        assert result["id"] == 7
+
 
 class TestMakeFormat:
     def test_video_format(self):
@@ -409,6 +483,18 @@ class TestParseMasterPlaylist:
         assert formats[1]["height"] == 720
         assert formats[1]["tbr"] == 1
 
+    def test_skips_comments_and_blanks_between_stream_inf_and_uri(self):
+        playlist = (
+            "#EXTM3U\n"
+            '#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360\n'
+            "# a comment\n"
+            "\n"
+            "360p.m3u8\n"
+        )
+        formats = kick._parse_master_playlist(playlist, "https://cdn.example.com/master.m3u8")
+        assert len(formats) == 1
+        assert formats[0]["height"] == 360
+
 
 class TestBuildHlsFormats:
     def test_empty_source(self, monkeypatch):
@@ -431,6 +517,12 @@ class TestBuildHlsFormats:
         monkeypatch.setattr(kick, "_fetch_url", lambda url, cancel_check=None: "#EXTM3U\n#EXTINF:5,\nseg.ts\n")
         formats = kick._build_hls_formats("https://media.example.com/media.m3u8")
         assert len(formats) == 1
+
+    def test_master_without_variants_falls_back(self, monkeypatch):
+        monkeypatch.setattr(kick, "_fetch_url", lambda url, cancel_check=None: "#EXT-X-STREAM-INF:BANDWIDTH=1000\n")
+        formats = kick._build_hls_formats("https://media.example.com/master.m3u8")
+        assert len(formats) == 1
+        assert formats[0]["height"] == 1080
 
     def test_passes_auth_token_to_fetch(self, monkeypatch):
         seen = {}

@@ -145,6 +145,16 @@ class TestFindFfmpeg:
         assert find_ffmpeg() == binary.resolve()
 
 
+class TestIsReady:
+    def test_true_when_found(self, monkeypatch):
+        monkeypatch.setattr(ffmpeg_mod, "find_ffmpeg", lambda: Path("/usr/bin/ffmpeg"))
+        assert ffmpeg_mod.is_ready() is True
+
+    def test_false_when_missing(self, monkeypatch):
+        monkeypatch.setattr(ffmpeg_mod, "find_ffmpeg", lambda: None)
+        assert ffmpeg_mod.is_ready() is False
+
+
 class TestFfmpegDir:
     def test_returns_parent(self, monkeypatch, base):
         monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: "/opt/ffmpeg/bin/ffmpeg")
@@ -252,6 +262,55 @@ class TestExtract:
         out = tmp_path / "out"
         _extract(archive, out)
         assert (out / "ffmpeg").read_bytes() == b"x"
+
+    def test_zip_with_directory_entries(self, tmp_path):
+        archive = tmp_path / "d.zip"
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("bin/", "")
+            zf.writestr("bin/ffmpeg", b"x")
+        archive.write_bytes(buf.getvalue())
+        out = tmp_path / "out"
+        _extract(archive, out)
+        assert (out / "bin").is_dir()
+        assert (out / "bin" / "ffmpeg").read_bytes() == b"x"
+
+    def test_tar_with_dir_and_symlink_members(self, tmp_path):
+        archive = tmp_path / "d.tar.xz"
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w:xz") as tf:
+            dir_info = tarfile.TarInfo("sub/")
+            dir_info.type = tarfile.DIRTYPE
+            tf.addfile(dir_info)
+            link_info = tarfile.TarInfo("sub/link")
+            link_info.type = tarfile.SYMTYPE
+            link_info.linkname = "ffmpeg"
+            tf.addfile(link_info)
+            data = tarfile.TarInfo("sub/ffmpeg")
+            data.size = 3
+            tf.addfile(data, io.BytesIO(b"abc"))
+        archive.write_bytes(buf.getvalue())
+        out = tmp_path / "out"
+        _extract(archive, out)
+        assert (out / "sub").is_dir()
+        assert (out / "sub" / "ffmpeg").read_bytes() == b"abc"
+        assert not (out / "sub" / "link").exists()
+
+    def test_tar_extractfile_none_skipped(self, tmp_path, monkeypatch):
+        archive = tmp_path / "e.tar.xz"
+        archive.write_bytes(_make_tar_xz({"ffmpeg": b"abc"}))
+
+        real_extractfile = tarfile.TarFile.extractfile
+
+        def fake_extractfile(self, member, *args, **kwargs):
+            if member.name == "ffmpeg":
+                return None
+            return real_extractfile(self, member, *args, **kwargs)
+
+        monkeypatch.setattr(tarfile.TarFile, "extractfile", fake_extractfile)
+        out = tmp_path / "out"
+        _extract(archive, out)
+        assert not (out / "ffmpeg").exists()
 
     def test_unsupported_extension(self, tmp_path):
         archive = tmp_path / "a.bin"

@@ -20,6 +20,32 @@ class TestRun:
         assert ok is False
         assert "nenalezen" in message.lower()
 
+    def test_timeout_reports_error(self):
+        ok, message = sys_mod._run([sys.executable, "-c", "import time; time.sleep(5)"], timeout=0.2)
+        assert ok is False
+        assert "Časový limit" in message
+
+
+class TestRunStartfile:
+    def test_success(self, monkeypatch):
+        import os
+
+        monkeypatch.setattr(os, "startfile", lambda p: None, raising=False)
+        ok, message = sys_mod._run_startfile("/tmp/somewhere")
+        assert ok is True
+        assert message == ""
+
+    def test_failure(self, monkeypatch):
+        import os
+
+        def boom(p):
+            raise OSError("no handler")
+
+        monkeypatch.setattr(os, "startfile", boom, raising=False)
+        ok, message = sys_mod._run_startfile("/tmp/somewhere")
+        assert ok is False
+        assert "OSError" in message
+
 
 class TestOpenPath:
     def test_nonexistent_path_returns_error(self):

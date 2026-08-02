@@ -184,3 +184,94 @@ class TestConfigManager:
 
         monkeypatch.setattr(Path, "mkdir", fake_mkdir)
         ConfigManager._ensure_output_folder("/uncreatable/path")
+
+    def test_ensure_output_folder_empty_is_noop(self):
+        ConfigManager._ensure_output_folder("")
+
+    def test_load_handles_non_dict_json(self, temp_config_dir):
+        config_path = temp_config_dir / CONFIG_FILE_NAME
+        config_path.write_text("[1, 2, 3]", encoding="utf-8")
+        cfg = ConfigManager.load()
+        assert cfg["quality"] == QUALITY_BEST
+
+    def test_save_fsync_failure_returns_false(self, temp_config_dir, monkeypatch):
+        import os
+
+        config_path = temp_config_dir / CONFIG_FILE_NAME
+
+        def fake_fsync(fd):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(os, "fsync", fake_fsync)
+        assert ConfigManager.save({"quality": "1080p"}) is False
+        assert not config_path.exists()
+
+    def test_load_fixes_none_value(self, temp_config_dir):
+        config_path = temp_config_dir / CONFIG_FILE_NAME
+        data = {
+            "quality": QUALITY_BEST,
+            "format": FORMAT_MP4,
+            "output_folder": str(temp_config_dir),
+            "cookies_source": COOKIES_NONE,
+            "cookies_file_path": "",
+            "re_encode": False,
+            "crf": None,
+            "preset": "fast",
+        }
+        config_path.write_text(json.dumps(data), encoding="utf-8")
+        cfg = ConfigManager.load()
+        assert cfg["crf"] == 23
+        saved = json.loads(config_path.read_text(encoding="utf-8"))
+        assert saved["crf"] == 23
+
+    def test_load_fixes_list_value(self, temp_config_dir):
+        config_path = temp_config_dir / CONFIG_FILE_NAME
+        data = {
+            "quality": QUALITY_BEST,
+            "format": FORMAT_MP4,
+            "output_folder": str(temp_config_dir),
+            "cookies_source": COOKIES_NONE,
+            "cookies_file_path": "",
+            "re_encode": False,
+            "crf": [1, 2, 3],
+            "preset": "fast",
+        }
+        config_path.write_text(json.dumps(data), encoding="utf-8")
+        cfg = ConfigManager.load()
+        assert cfg["crf"] == 23
+
+
+class TestRawVersion:
+    def test_invalid_schema_version_defaults_to_v1(self):
+        out = migrate({"schema_version": "abc", "format": "mp3"})
+        assert out["schema_version"] == 2
+        assert out["format"] == MediaFormat.MP3.value
+
+
+class TestAppConfigCoercion:
+    def test_post_init_invalid_preset_resets(self):
+        from stahovac.config.app_config import AppConfig
+
+        assert AppConfig(preset="bogus").preset == "fast"
+
+    def test_post_init_empty_quality_resets(self):
+        from stahovac.config.app_config import AppConfig
+
+        assert AppConfig(quality="").quality == QUALITY_BEST
+
+    def test_post_init_empty_format_resets(self):
+        from stahovac.config.app_config import AppConfig
+
+        assert AppConfig(format="").format == FORMAT_MP4
+
+    def test_coerce_bool_int(self):
+        from stahovac.config.app_config import _coerce_bool
+
+        assert _coerce_bool(1) is True
+        assert _coerce_bool(0) is False
+
+    def test_coerce_crf_out_of_range(self):
+        from stahovac.config.app_config import _coerce_crf
+
+        assert _coerce_crf(100) == 23
+        assert _coerce_crf(-5) == 23

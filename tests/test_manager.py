@@ -176,6 +176,20 @@ class TestDownloadManager:
         manager._wrap_state(DownloadState.FETCHING_METADATA)
         assert manager.download_state == DownloadState.FETCHING_METADATA
 
+    def test_progress_active_job_forwards_to_callback(self, tmp_path):
+        received = []
+        manager = self._make(tmp_path, on_progress=lambda jid, p, s, e: received.append((jid, p, s, e)))
+        manager._active_job_id = "j1"
+        manager._wrap_progress("j1", 50.0, "1 MB/s", "30s")
+        assert received == [("j1", 50.0, "1 MB/s", "30s")]
+
+    def test_progress_stale_job_ignored(self, tmp_path):
+        received = []
+        manager = self._make(tmp_path, on_progress=lambda jid, p, s, e: received.append(jid))
+        manager._active_job_id = "j1"
+        manager._wrap_progress("old", 10.0, "", "")
+        assert received == []
+
     def test_config_save(self, tmp_path):
         manager = self._make(tmp_path)
         assert manager.config_save({"quality": "1080p"}) is True
