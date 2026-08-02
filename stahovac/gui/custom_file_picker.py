@@ -161,7 +161,7 @@ class CustomFilePicker:
     def _refresh_list(self):
         self._file_list.controls.clear()
         self._path_text.value = str(self._current_path)
-        self._select_btn.disabled = self._mode == "file"
+        self._select_btn.disabled = self._mode == "file" and self._selected_file is None
 
         if self._current_path.parent != self._current_path:
             self._file_list.controls.append(self._make_item("..", self._current_path.parent, True, False))
@@ -229,6 +229,7 @@ class CustomFilePicker:
     def _on_item_click(self, path: Path, is_dir: bool):
         if is_dir:
             self._current_path = path
+            self._selected_file = None
             self._refresh_list()
         elif self._mode == "file":
             self._selected_file = path
