@@ -273,6 +273,27 @@ class TestFetchVodPage:
         monkeypatch.setattr(kick, "_fetch_url", lambda url, cancel_check=None: page)
         assert kick._fetch_vod_page(self.URL) is None
 
+    def test_no_playback_url_in_vod_region(self, monkeypatch):
+        page = self.PAGE[: self.PAGE.index('"])</script>') + len('"])</script>')]
+        monkeypatch.setattr(kick, "_fetch_url", lambda url, cancel_check=None: page)
+        assert kick._fetch_vod_page(self.URL) is None
+
+    LIVE_M3U8 = (
+        "https://fa723fc1b171.us-west-2.playback.live-video.net/api/video/v1/"
+        "us-west-2.196233775518.channel.YNnlAxotHfyv.m3u8?token=live-player"
+    )
+
+    def test_prefers_vod_m3u8_over_live_player(self, monkeypatch):
+        page = (
+            '<script>var x="' + self.LIVE_M3U8 + '"</script>'
+            + self.PAGE
+            + '<script>var y="' + self.M3U8 + '"</script>'
+        )
+        monkeypatch.setattr(kick, "_fetch_url", lambda url, cancel_check=None: page)
+        result = kick._fetch_vod_page(self.URL)
+        assert result is not None
+        assert result["source"] == self.M3U8
+
     def test_forwards_auth_token_to_fetch_url(self, monkeypatch):
         seen = {}
 

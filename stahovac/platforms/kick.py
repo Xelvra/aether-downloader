@@ -176,12 +176,6 @@ def _fetch_vod_page(url: str, cancel_check=None, auth_token: str | None = None) 
     if not page:
         return None
 
-    m3u8 = _VOD_PAGE_M3U8_RE.search(page)
-    if not m3u8:
-        logger.debug("Kick VOD page %s: playback URL not found", vod_id)
-        return None
-    source = m3u8.group(0)
-
     obj_pat = re.compile(
         r'\\"category\\":\{\\"id\\":(\d+),\\"name\\":\\"([^"]+)\\",\\"slug\\":\\"([^"]+)\\"\},'
         r'\\"channel\\":\{\\"id\\":(\d+),\\"slug\\":\\"([^"]+)\\",\\"username\\":\\"([^"]+)\\"\},'
@@ -191,6 +185,14 @@ def _fetch_vod_page(url: str, cancel_check=None, auth_token: str | None = None) 
     if not obj:
         logger.debug("Kick VOD page %s: video object not found", vod_id)
         return None
+
+    # Playback URL se hledá jen v regionu VOD objektu, ne na celé stránce –
+    # stránka může obsahovat live player kanálu, jehož m3u8 by jinak seděl dřív.
+    m3u8 = _VOD_PAGE_M3U8_RE.search(page[obj.start() : obj.end() + 4000])
+    if not m3u8:
+        logger.debug("Kick VOD page %s: playback URL not found in VOD region", vod_id)
+        return None
+    source = m3u8.group(0)
 
     tail = page[obj.end() : obj.end() + 2000]
     title = _re_group(_VOD_TITLE_RE, tail)
