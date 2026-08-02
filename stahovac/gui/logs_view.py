@@ -11,7 +11,7 @@ from stahovac.gui.theme import (
     sz,
 )
 from stahovac.storage.history import HistoryManager
-from stahovac.utils.system import open_folder_in_explorer
+from stahovac.utils.system import open_path
 
 
 class LogsView:
@@ -124,7 +124,7 @@ class LogsView:
                                     icon=ft.Icons.FOLDER_OPEN_ROUNDED,
                                     icon_color=COLOR_ACCENT,
                                     icon_size=sz(18),
-                                    on_click=lambda e, p=item.get("file_path", ""): open_folder_in_explorer(p),  # noqa: B008
+                                    on_click=lambda e, p=item.get("file_path", ""): self._open_history_item(p),  # noqa: B008
                                 ),
                             ],
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -134,3 +134,14 @@ class LogsView:
                         bgcolor=COLOR_SURFACE,
                     )
                 )
+
+    def _open_history_item(self, file_path: str) -> None:
+        ok, message = open_path(file_path)
+        if not ok:
+            self._notify(message)
+
+    def _notify(self, message: str) -> None:
+        snackbar = ft.SnackBar(content=ft.Text(message), open=True)
+        self._page.overlay.append(snackbar)
+        snackbar.on_dismiss = lambda e: self._page.overlay.remove(snackbar) if snackbar in self._page.overlay else None
+        self._page.update()

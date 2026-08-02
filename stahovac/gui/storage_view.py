@@ -20,7 +20,7 @@ from stahovac.gui.theme import (
     sz,
 )
 from stahovac.utils.paths import get_base_dir
-from stahovac.utils.system import open_folder_in_explorer
+from stahovac.utils.system import open_path
 
 
 class StorageView:
@@ -96,7 +96,7 @@ class StorageView:
             icon_color=COLOR_SUCCESS,
             icon_size=sz(20),
             tooltip="Otevřít v průzkumníku",
-            on_click=lambda e: open_folder_in_explorer(self.output_folder_text.value),
+            on_click=self._open_output_folder,
         )
         if mobile:
             return ft.Column(
@@ -106,6 +106,17 @@ class StorageView:
         return ft.Row(
             [self.output_folder_text, open_btn, launch_btn], spacing=sz(12), alignment=ft.MainAxisAlignment.CENTER
         )
+
+    def _open_output_folder(self, e=None):
+        ok, message = open_path(self.output_folder_text.value)
+        if not ok:
+            self._notify(message)
+
+    def _notify(self, message: str) -> None:
+        snackbar = ft.SnackBar(content=ft.Text(message), open=True)
+        self._page.overlay.append(snackbar)
+        snackbar.on_dismiss = lambda e: self._page.overlay.remove(snackbar) if snackbar in self._page.overlay else None
+        self._page.update()
 
     def build(self):
         compact = th.SCREEN_WIDTH < BREAKPOINT_COMPACT
