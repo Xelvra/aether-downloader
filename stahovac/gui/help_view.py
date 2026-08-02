@@ -121,6 +121,16 @@ def build_help_content(dismiss_callback) -> ft.Container:
                     "Poznámka: cookies se používají jen pro Kick a Twitch – na YouTube se záměrně neaplikují.",
                 ),
                 _section(
+                    "Safari na macOS (obtížné čtení cookies)",
+                    "Pokud na macOS vybereš Safari a sub-only videa na Kicku/Twitchi nejdou stáhnout, "
+                    "je to skoro jistě tím, že systém brání aplikaci přečíst Safari cookies "
+                    "ochranou soukromí (TCC). Chrome/Firefox tímto problémem netrpí.",
+                    "Řešení: v Systémovém nastavení → Soukromí a zabezpečení → Plný přístup k disku "
+                    "přidej stahovac.app, aplikaci restartuj a zkus to znovu.",
+                    "Nebo prostě vyber Chrome/Firefox, případně vyexportuj cookies.txt a vyber "
+                    "„Vlastní soubor (cookies.txt)“.",
+                ),
+                _section(
                     "Instalace FFmpeg",
                     "FFmpeg je malý program, který aplikace potřebuje pro ořez videa a převod na MP3.",
                     "Pokud není nainstalovaný, uvidíš u spodního okraje oranžové upozornění "

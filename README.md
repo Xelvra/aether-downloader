@@ -77,6 +77,8 @@ Podrobný postup pro konkrétní systém najdeš níže.
 
 > 📂 Stažená videa a nastavení se ukládají do **`~/Library/Application Support/AetherDownloader/`** — ne do samotné aplikace. Složku si můžeš změnit v Nastavení.
 
+> ⚠️ **Safari a cookies:** pokud na Kicku/Twitchi nefungují sub-only videa a v Nastavení máš vybraný **Safari**, systém nejspíš brání aplikaci přečíst Safari cookies. Povol v **Systémové nastavení → Soukromí a zabezpečení → Plný přístup k disku** aplikaci `stahovac.app` a restartuj ji, nebo vyber Chrome/Firefox či `cookies.txt`.
+
 ### 📱 Android (pro pokročilejší uživatele)
 
 Pro Android neexistuje hotová aplikace ke stažení — spouští se přes Termux ze zdrojového kódu a otevírá se v prohlížeči.
