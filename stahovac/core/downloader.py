@@ -508,6 +508,11 @@ class Downloader:
             else:
                 self._finish_fail(job_id)
 
+        except yt_dlp.utils.YoutubeDLError as e:
+            err = str(e)
+            self.on_log(f"Stahování selhalo: {err[:300]}")
+            self._report_download_error(err, job_id)
+            self._finish_once(job_id, False, "Stahování selhalo")
         except Exception:
             self.on_log(f"Kritická výjimka: {traceback.format_exc()}")
             self.on_status(job_id, "Aplikaci nastala chyba. Podrobnosti v logu.", "orange")
@@ -708,12 +713,16 @@ class Downloader:
             return None
 
         extra_opts = self._platform_opts(url)
-        info = self._metadata.fetch_info(
-            url,
-            self._config,
-            extra_opts=extra_opts,
-            cancel_check=self._cancel_event.is_set,
-        )
+        try:
+            info = self._metadata.fetch_info(
+                url,
+                self._config,
+                extra_opts=extra_opts,
+                cancel_check=self._cancel_event.is_set,
+            )
+        except yt_dlp.utils.YoutubeDLError as e:
+            self.on_log(f"Ranged stahování úseku přeskočeno: {e}")
+            return None
         if self.is_cancelled:
             return None
 

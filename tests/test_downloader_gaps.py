@@ -254,6 +254,23 @@ class TestRangedDownload:
         assert result is None
         assert any("HLS formát" in line for line in logs)
 
+    def test_ytdlp_error_falls_back(self, monkeypatch):
+        monkeypatch.setattr(dl_mod, "find_ffmpeg", lambda: Path("/opt/ffmpeg/bin/ffmpeg"))
+        logs = []
+        dl = self._make_dl(logs=logs)
+
+        def boom(url, config, extra_opts=None, cancel_check=None):
+            raise yt_dlp.utils.DownloadError(
+                "ERROR: [kick:vod] 019fac9d: Kick VOD 019fac9d not found (deleted or unavailable)"
+            )
+
+        dl._metadata.fetch_info = boom
+        assert (
+            dl._ranged_download(self._kick_params(), "https://kick.com/ch/videos/019fac9d", "j1", Path("/tmp/x"))
+            is None
+        )
+        assert any("Ranged" in line for line in logs)
+
     def _patch_success(self, monkeypatch, tmp_path, job_dir):
         monkeypatch.setattr(dl_mod, "find_ffmpeg", lambda: Path("/opt/ffmpeg/bin/ffmpeg"))
         monkeypatch.setattr(
@@ -408,3 +425,30 @@ class TestFinishMessages:
         dl.on_status = lambda jid, t, c: statuses.append(t)
         dl._finish_success("j1", "T", "u", None, "Pouze titulky (SRT)")
         assert any("Titulky (SRT)" in s for s in statuses)
+
+
+class TestDownloadWorkerYtDlpError:
+    def test_youtubedlp_error_is_reported_not_critical(self, tmp_path):
+        logs, statuses, finishes = [], [], []
+        dl = Downloader({})
+        dl.on_status = lambda jid, t, c: statuses.append(t)
+        dl.on_log = lambda t: logs.append(t)
+        dl.on_finish = lambda jid, s, m: finishes.append((s, m))
+        dl.on_state = lambda s: None
+        dl.on_progress = lambda *a: None
+        dl._get_title = lambda url: "Mock Title"
+
+        def boom(url, opts, job_id):
+            raise yt_dlp.utils.DownloadError(
+                "ERROR: [kick:vod] 019fac9d: Kick VOD 019fac9d not found (deleted or unavailable)"
+            )
+
+        dl._download_with_ytdlp = boom
+        params = DownloadParams(
+            url="https://kick.com/ch/videos/019fac9d",
+            output_folder=str(tmp_path),
+        )
+        dl._download_worker(params, "j1")
+        assert any("Video není dostupné" in s for s in statuses)
+        assert not any("Kritická výjimka" in line for line in logs)
+        assert (False, "Stahování selhalo") in finishes
