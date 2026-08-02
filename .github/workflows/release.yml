@@ -20,12 +20,12 @@ jobs:
           - os: windows-latest
             artifact: stahovac-windows-x86_64
           - os: macos-latest
-            artifact: stahovac-macos-x86_64
+            artifact: stahovac-macos-arm64
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           enable-cache: true
       - name: Sync deps
         run: uv sync --locked --extra dev
@@ -42,6 +42,16 @@ jobs:
         run: choco install ffmpeg -y
       - name: Build onefile
         run: uv run python build.py --onefile
+      - name: Smoke test binary (TLS/CA + yt-dlp)
+        shell: pwsh
+        env:
+          SMOKE_URL: "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+        run: |
+          $bin = if ($env:RUNNER_OS -eq "Windows") { "dist/stahovac.exe" } else { "dist/stahovac" }
+          & $bin --check --check-url $env:SMOKE_URL --check-output "$PWD/check.json"
+          $rc = $LASTEXITCODE
+          if (Test-Path "$PWD/check.json") { Get-Content "$PWD/check.json" | Write-Output }
+          exit $rc
       - name: Stage binary
         shell: bash
         run: |

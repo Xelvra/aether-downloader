@@ -18,18 +18,24 @@ def _configure_ssl() -> None:
 
     Binárka z PyInstalleru (hlavně z CI) nemá zaručený přístup k systémovému
     úložišti CA certifikátů. Proměnná ``SSL_CERT_FILE`` pak platí pro všechny
-    defaultní SSL kontexty včetně těch, které vytváří yt-dlp.
+    defaultní SSL kontexty včetně těch, které vytváří yt-dlp; ``CURL_CA_BUNDLE``
+    navíc pokrývá libcurl (curl_cffi). Obě se nastaví jen tehdy, když je
+    certifi bundle součástí binárky (jinak se respektuje systémové nastavení).
     """
-    if os.environ.get("SSL_CERT_FILE"):
+    if os.environ.get("SSL_CERT_FILE") and os.environ.get("CURL_CA_BUNDLE"):
         return
+    bundle: str | None = None
     try:
         import certifi
 
-        bundle = certifi.where()
+        candidate = certifi.where()
     except (ImportError, OSError):
-        return
-    if os.path.isfile(bundle):
-        os.environ["SSL_CERT_FILE"] = bundle
+        candidate = None
+    if candidate and os.path.isfile(candidate):
+        bundle = candidate
+    if bundle:
+        os.environ.setdefault("SSL_CERT_FILE", bundle)
+        os.environ.setdefault("CURL_CA_BUNDLE", bundle)
 
 
 def _setup_runtime() -> None:
@@ -63,6 +69,98 @@ def _is_headless() -> bool:
     return not bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
 
 
+_SMOKE_HOSTS = ("https://www.google.com/", "https://github.com/", "https://johnvansickle.com/ffmpeg/")
+
+_ANTI_BOT_MARKERS = (
+    "sign in to confirm",
+    "confirm you",
+    "not a bot",
+    "bot check",
+    "http error 429",
+    "http error 403",
+    "too many requests",
+    "rate.limit",
+    "this video is unavailable",
+    "geo",
+)
+
+
+def _run_checks(url: str | None, output: str | None) -> int:
+    """Headless self-test binárky (TLS/CA + volitelně yt-dlp).
+
+    Vrací 0, když vše prošlo, jinak 1. Výsledek se vypíše a (pokud je zadán
+    ``output``) uloží jako JSON. Používá se hlavně v CI na zkompilované binárce,
+    aby se odhalily problémy, které na běžném systému (např. s certifi CA
+    bundlem) nevznikají.
+    """
+    import json
+    import ssl
+    import urllib.error
+    import urllib.request
+
+    from stahovac.utils.ssl import make_ssl_context
+
+    results: list[dict] = []
+    ok = True
+
+    def record(name: str, success: bool, detail: str = "") -> None:
+        nonlocal ok
+        results.append({"name": name, "ok": bool(success), "detail": detail})
+        if not success:
+            ok = False
+
+    try:
+        import certifi
+
+        cafile = certifi.where()
+        record("certifi-cafile", os.path.isfile(cafile), cafile)
+    except Exception as exc:  # pragma: no cover
+        record("certifi-cafile", False, f"{type(exc).__name__}: {exc}")
+
+    for host in _SMOKE_HOSTS:
+        req = urllib.request.Request(host, headers={"User-Agent": "AetherDownloader-selfcheck/1.0"})
+        try:
+            with urllib.request.urlopen(req, timeout=15, context=make_ssl_context()) as resp:
+                record(f"tls:{host}", True, f"HTTP {resp.status}")
+        except urllib.error.HTTPError as exc:
+            record(f"tls:{host}", True, f"HTTP {exc.code} (TLS OK)")
+        except (ssl.SSLCertVerificationError, ssl.SSLError, urllib.error.URLError) as exc:
+            record(f"tls:{host}", False, f"{type(exc).__name__}: {exc}")
+        except Exception as exc:  # pragma: no cover
+            record(f"tls:{host}", False, f"{type(exc).__name__}: {exc}")
+
+    if url:
+        try:
+            import yt_dlp
+
+            opts = {
+                "quiet": True,
+                "no_warnings": True,
+                "noplaylist": True,
+                "socket_timeout": 20,
+                "retries": 2,
+                "extractor_retries": 1,
+            }
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+            title = (info or {}).get("title") or "<bez názvu>"
+            record("ytdlp-extract", True, title[:200])
+        except Exception as exc:
+            text = f"{type(exc).__name__}: {exc}"
+            low = text.lower()
+            tolerated = any(m in low for m in _ANTI_BOT_MARKERS)
+            record("ytdlp-extract", tolerated, text[:300])
+
+    report = {"ok": ok, "results": results}
+    if output:
+        import contextlib
+
+        with contextlib.suppress(OSError):
+            Path(output).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0 if ok else 1
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Aether Downloader")
     parser.add_argument(
@@ -82,12 +180,30 @@ def parse_args(argv=None) -> argparse.Namespace:
         default=int(os.environ.get("AETHER_PORT", "8000")),
         help="Web server port (default: 8000, env: AETHER_PORT)",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Run headless self-test of TLS/CA + yt-dlp connectivity and exit",
+    )
+    parser.add_argument(
+        "--check-url",
+        default=os.environ.get("AETHER_CHECK_URL"),
+        help="URL ověřená přes yt-dlp v rámci --check (default: env AETHER_CHECK_URL)",
+    )
+    parser.add_argument(
+        "--check-output",
+        default=os.environ.get("AETHER_CHECK_OUTPUT"),
+        help="Cesta k souboru, do kterého --check zapíše JSON výsledek (default: env AETHER_CHECK_OUTPUT)",
+    )
     return parser.parse_args(argv)
 
 
 def run(argv=None) -> None:
     _setup_runtime()
     args = parse_args(argv)
+
+    if args.check:
+        sys.exit(_run_checks(args.check_url, args.check_output))
 
     from stahovac.app import main
 

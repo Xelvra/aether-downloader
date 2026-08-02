@@ -21,6 +21,13 @@ tmp_ret = collect_all('flet_desktop')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('flet_web')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+# certifi: CA bundle musí být uvnitř binárky, aby TLS fungovalo i tam, kde
+# systémové úložiště certifikátů není dostupné (typicky CI build).
+tmp_ret = collect_all('certifi')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+# yt-dlp-ejs: JS solver (core.min.js / lib.min.js) pro YouTube PO tokeny.
+tmp_ret = collect_all('yt_dlp_ejs')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
