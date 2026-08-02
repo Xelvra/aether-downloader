@@ -13,8 +13,28 @@ def _noop():
     pass
 
 
+def _configure_ssl() -> None:
+    """Nasměruje TLS ověřování na certifi CA bundle.
+
+    Binárka z PyInstalleru (hlavně z CI) nemá zaručený přístup k systémovému
+    úložišti CA certifikátů. Proměnná ``SSL_CERT_FILE`` pak platí pro všechny
+    defaultní SSL kontexty včetně těch, které vytváří yt-dlp.
+    """
+    if os.environ.get("SSL_CERT_FILE"):
+        return
+    try:
+        import certifi
+
+        bundle = certifi.where()
+    except (ImportError, OSError):
+        return
+    if os.path.isfile(bundle):
+        os.environ["SSL_CERT_FILE"] = bundle
+
+
 def _setup_runtime() -> None:
     """Inicializace běhového prostředí: patch yt-dlp, base dir, noop pip kontroly."""
+    _configure_ssl()
     patch_platform_extractors()
 
     if getattr(sys, "frozen", False):

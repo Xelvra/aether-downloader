@@ -8,10 +8,11 @@ import contextlib
 import json
 import logging
 import re
-import ssl
 import urllib.parse
 import urllib.request
 from urllib.error import HTTPError
+
+from stahovac.utils.ssl import make_ssl_context
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ def parse_vod_url(url: str) -> tuple[str, str] | None:
 
 def _api_get(path: str, timeout: int = 15, cancel_check=None) -> dict | list | None:
     _check_cancel(cancel_check)
-    ctx = ssl.create_default_context()
+    ctx = make_ssl_context()
     req = urllib.request.Request(f"{KICK_API_BASE}/{path}", headers=_API_HEADERS)
     try:
         resp = urllib.request.urlopen(req, timeout=timeout, context=ctx)
@@ -162,7 +163,7 @@ def _resolve_vod_id(url: str, cancel_check=None) -> dict | None:
 def _fetch_url(url: str, timeout: int = 15, cancel_check=None) -> str | None:
     _check_cancel(cancel_check)
     req = urllib.request.Request(url, headers=_API_HEADERS)
-    ctx = ssl.create_default_context()
+    ctx = make_ssl_context()
     try:
         resp = urllib.request.urlopen(req, timeout=timeout, context=ctx)
         body: str | None = resp.read().decode("utf-8", errors="replace")

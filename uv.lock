@@ -11,6 +11,7 @@ resolution-markers = [
 name = "aether-downloader"
 source = { editable = "." }
 dependencies = [
+    { name = "certifi" },
     { name = "curl-cffi" },
     { name = "flet" },
     { name = "flet-desktop" },
@@ -30,6 +31,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "certifi", specifier = ">=2024.0.0" },
     { name = "curl-cffi", specifier = ">=0.10,<0.16" },
     { name = "flet", specifier = ">=0.86.0,<1.0.0" },
     { name = "flet-desktop", specifier = ">=0.86.0,<1.0.0" },

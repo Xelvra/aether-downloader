@@ -22,6 +22,7 @@ from uuid import uuid4
 
 from stahovac.utils.format import format_eta, format_speed
 from stahovac.utils.paths import get_base_dir
+from stahovac.utils.ssl import make_ssl_context
 
 _USER_AGENT = "Mozilla/5.0 (compatible; AetherDownloader/1.0)"
 
@@ -177,7 +178,7 @@ def _http_get(url: str, cancel_check=None, max_bytes: int = 1 << 20) -> bytes | 
         raise FfmpegInstallError("Stahování FFmpeg bylo zrušeno.")
     request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(request, timeout=30, context=make_ssl_context()) as response:
             data = response.read(max_bytes + 1)
             return bytes(data) if data is not None else None
     except (OSError, ValueError):
@@ -189,7 +190,7 @@ def _download(url: str, dest: Path, progress_cb, cancel_check) -> Path:
     downloaded = 0
     request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(request, timeout=60, context=make_ssl_context()) as response:
             total = int(response.headers.get("Content-Length") or 0)
             with dest.open("wb") as handle:
                 while True:

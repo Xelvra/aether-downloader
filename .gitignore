@@ -17,6 +17,7 @@ tool/
 config.json
 history.json
 downloads/
+bin/
 *.exe
 .DS_Store
 Thumbs.db
