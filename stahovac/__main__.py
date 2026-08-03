@@ -48,7 +48,8 @@ def _setup_runtime() -> None:
         set_base_dir(base)
         migrate_bundle_data(base)
     else:
-        set_base_dir(Path(__file__).resolve().parent.parent)
+        base = Path(os.environ.get("AETHER_BASE_DIR") or Path(__file__).resolve().parent.parent)
+        set_base_dir(base)
 
     try:
         import flet.utils.pip as _flet_pip

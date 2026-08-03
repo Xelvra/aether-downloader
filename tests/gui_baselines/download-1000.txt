@@ -1,0 +1,13 @@
+- text: Aether Downloader Stahovač pro YouTube, Kick, Twitch a mnoho dalších
+- button
+- button "Stahování"
+- button "Ořez"
+- button "Nastavení"
+- button "Historie"
+- group:
+  - text: "Vložte odkaz pro rychlé stažení:"
+  - textbox "Odkaz na video"
+  - button "Znovu načíst metadata"
+  - button "Stáhnout"
+  - button "Zrušit" [disabled]
+- text: Připraven k práci

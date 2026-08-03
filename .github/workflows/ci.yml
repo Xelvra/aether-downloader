@@ -60,3 +60,25 @@ jobs:
         run: |
           ./dist/stahovac --check --check-output check.json
           test "$(python -c 'import json;print(json.load(open("check.json"))["ok"])')" = "True"
+
+  gui:
+    name: GUI tests (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - name: Sync deps
+        run: uv sync --locked --extra dev
+      - name: Install Playwright browser
+        run: uv run playwright install --with-deps chromium
+      - name: GUI tests
+        run: uv run pytest tests/test_gui_web.py -q
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gui-screenshots
+          path: .screenshots/

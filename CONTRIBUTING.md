@@ -289,6 +289,16 @@ sudo dnf install binutils      # Fedora
 | **Lint & Typecheck** | `ruff check .` + `mypy stahovac` |
 | **Tests** | `pytest --cov` (vyžaduje pokrytí ≥ 80 %) |
 | **Build smoke test** | `build.py --onefile` na Linuxu + ověření binárky |
+| **GUI tests** | `tests/test_gui_web.py` – aplikace se spustí ve web režimu a Playwright ověří UI (viz níže) |
+
+### GUI testy (Playwright)
+
+`tests/test_gui_web.py` spouští aplikaci jako lokální web server (`stahovac --web`) a v headless Chromiu (Playwright) ověřuje, že se UI vykreslí, karty přepínají a responsive layout funguje (karty zmizí pod 640 px).
+
+- Flet 0.86 renderuje UI jako Flutter canvas, proto testy zapínají **semantics tree (a11y)** a porovnávají `aria_snapshot()` proti baseline souborům v `tests/gui_baselines/` (regrese struktury – chybějící prvek nebo změněný label = neúspěch).
+- Screenshoty se ukládají do `.screenshots/` (artefakt v CI pro vizuální kontrolu).
+- Lokálně je potřeba prohlížeč: `uv run playwright install chromium` (jinak se GUI testy přeskočí).
+- Nová baseline: když se záměrně změní layout, smaž příslušný soubor v `tests/gui_baselines/` a spusť test – vytvoří se znovu.
 
 Pro spuštění CI musí být `uv.lock` v synchronizaci s `pyproject.toml` (kontrola přes `uv sync --locked`).
 

@@ -1,0 +1,14 @@
+- text: Aether Downloader Stahovač pro YouTube, Kick, Twitch a mnoho dalších
+- button
+- button "Stahování"
+- button "Ořez"
+- button "Nastavení"
+- button "Historie"
+- group:
+  - text: "Výchozí kvalita a typ média:"
+  - button
+  - button
+  - text: "Ořez časové osy (vyžaduje FFmpeg):"
+  - checkbox "Stáhnout celé video bez ořezu" [checked]
+  - checkbox "Překódovat (přesnější ořez, pomalejší)"
+- text: Připraven k práci

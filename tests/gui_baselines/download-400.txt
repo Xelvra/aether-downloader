@@ -1,0 +1,10 @@
+- button
+- text: Aether Downloader
+- button
+- group:
+  - text: "Vložte odkaz pro rychlé stažení:"
+  - textbox "Odkaz na video"
+  - button "Znovu načíst metadata"
+  - button "Stáhnout"
+  - button "Zrušit" [disabled]
+- text: Připraven k práci

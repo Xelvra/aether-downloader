@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Přidáno
+- GUI regresní testy (Playwright) – aplikace se spouští ve web režimu, ověřuje se vykreslení, přepínání karet a responsive layout přes aria snapshot baseline.
+
 ### Opraveno
 - Dvojitá informace o průběhu instalace FFmpeg – podrobný progress (procenta, rychlost, zbývající čas) se zobrazuje jen ve společném pruhu aplikace; v Nastavení zůstává jednoduchý status „Stahuji FFmpeg…".
 - Plynulejší roztažení okna – karty v horní liště se roztahují rovnoměrně, mezery mezi ikonami už neskáčou při změně šířky okna.
