@@ -271,6 +271,8 @@ def _download_archive(tmp_dir: Path, progress_cb, cancel_check) -> Path | None:
         try:
             _download(url, archive, progress_cb, cancel_check)
             _verify_sha256(archive, expected_sha)
+            if not _looks_like_archive(archive):
+                raise FfmpegInstallError("Mirror asset není platný archiv.")
             return archive
         except FfmpegInstallError:
             if cancel_check is not None and cancel_check():
@@ -282,6 +284,25 @@ def _download_archive(tmp_dir: Path, progress_cb, cancel_check) -> Path | None:
     archive = tmp_dir / _url_archive_name(upstream_url)
     _download(upstream_url, archive, progress_cb, cancel_check)
     return archive
+
+
+def _looks_like_archive(path: Path) -> bool:
+    """Ověří, že soubor skutečně vypadá jako očekávaný archiv (magické byty).
+
+    Chrání před bot-check stránkami, které servery občas vrátí místo souboru
+    (johnvansickle na IP adresách CI). Neznámý typ souboru nechá projít.
+    """
+    try:
+        with path.open("rb") as handle:
+            head = handle.read(6)
+    except OSError:
+        return False
+    name = path.name.lower()
+    if name.endswith(".tar.xz"):
+        return head.startswith(b"\xfd7zXZ")
+    if name.endswith(".zip"):
+        return head.startswith(b"PK\x03\x04")
+    return True
 
 
 def mirror_asset_name(system: str | None = None, machine: str | None = None) -> str | None:

@@ -125,6 +125,9 @@ jobs:
           stage.mkdir(exist_ok=True)
           dest = stage / name
           ffmpeg._download(url, dest, None, None)
+          if not ffmpeg._looks_like_archive(dest) or dest.stat().st_size < 1_000_000:
+              print(f"Mirror asset není platný archiv, přeskočeno: {name}")
+              raise SystemExit(0)
           digest = hashlib.sha256(dest.read_bytes()).hexdigest()
           (stage / f"{name}.sha256").write_text(f"{digest}  {name}\n", encoding="utf-8")
           print(f"Staged {name} ({dest.stat().st_size} B) sha256 {digest}")

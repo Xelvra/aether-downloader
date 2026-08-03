@@ -294,13 +294,19 @@ Pro spuštění CI musí být `uv.lock` v synchronizaci s `pyproject.toml` (kont
 
 ### Vydání (release)
 
-`.github/workflows/release.yml` se spouští při push tagu `v*` (např. `v1.2.0`):
+`.github/workflows/release.yml` se spouští při push tagu `v*` (např. `v1.3.0`):
 
 1. sestaví onefile binárku na **Linuxu a Windowsu** a na **macOS** aplikaci **`.app`** pro **Apple Silicon i Intel** (artefakty na GitHub Actions),
 2. vytvoří **GitHub Release** s binárkami a automaticky generovanými poznámkami (od commitů od minulého tagu).
 
 Na macOS se build spouští s `--onedir` (zabalí se do `stahovac.app`), na Linuxu/Windowsu s `--onefile`. Architektura:
 `macos-latest` (Apple Silicon) → `stahovac-macos-arm64.app.zip`, `macos-15-intel` (Intel) → `stahovac-macos-x86_64.app.zip`.
+
+**FFmpeg a release:**
+
+- **macOS bundling**: před buildem se stáhne FFmpeg do `bin/` a `stahovac.spec` ho přibalí do `.app` (pouze darwin). Aplikace pak funguje hned bez stahování.
+- **Mirror assety**: staging krok nahraje oficiální statické buildy (`ffmpeg-linux-*.tar.xz`, `ffmpeg-windows-*.zip`, `ffmpeg-macos.zip`) + soubory `.sha256`. Krok je **best-effort** a před nahráním **validuje archiv** (magické byty + velikost) – neplatný se přeskočí, build se nezablokuje.
+- **Runtime**: aplikace stahuje FFmpeg přednostně z mirroru (GitHub releases) s **SHA256 ověřením**; při neplatném mirror archivu nebo chybějícím assetu spadne na oficiální upstream.
 
 Před tagem lokálně ověř:
 

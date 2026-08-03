@@ -17,6 +17,7 @@ from stahovac.core.ffmpeg import (
     _extract,
     _find_binaries,
     _http_get,
+    _looks_like_archive,
     _resolve_download_url,
     _resolve_mirror,
     _smoke_test,
@@ -701,6 +702,33 @@ class TestResolveMirror:
         assert _resolve_mirror() is None
 
 
+class TestLooksLikeArchive:
+    def test_tar_xz_valid(self, tmp_path):
+        f = tmp_path / "a.tar.xz"
+        f.write_bytes(b"\xfd7zXZ\x00" + b"x" * 10)
+        assert _looks_like_archive(f) is True
+
+    def test_tar_xz_invalid(self, tmp_path):
+        f = tmp_path / "a.tar.xz"
+        f.write_bytes(b"<html>bot check")
+        assert _looks_like_archive(f) is False
+
+    def test_zip_valid(self, tmp_path):
+        f = tmp_path / "a.zip"
+        f.write_bytes(b"PK\x03\x04" + b"x" * 10)
+        assert _looks_like_archive(f) is True
+
+    def test_zip_invalid(self, tmp_path):
+        f = tmp_path / "a.zip"
+        f.write_bytes(b"<html>bot check")
+        assert _looks_like_archive(f) is False
+
+    def test_unknown_extension_passes(self, tmp_path):
+        f = tmp_path / "a.bin"
+        f.write_bytes(b"anything")
+        assert _looks_like_archive(f) is True
+
+
 class TestVerifySha256:
     def test_matches(self, tmp_path):
         f = tmp_path / "archive"
@@ -723,14 +751,16 @@ class TestDownloadArchive:
         monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: (mirror_url, "a" * 64))
         monkeypatch.setattr(ffmpeg_mod, "_verify_sha256", lambda *a, **k: None)
         downloaded = []
-        monkeypatch.setattr(
-            ffmpeg_mod,
-            "_download",
-            lambda url, dest, progress_cb, cancel_check: (downloaded.append(url), dest.write_bytes(b"mirror"), dest)[2],
-        )
+        payload = b"\xfd7zXZ\x00" + b"mirror"
+
+        def fake_download(url, dest, progress_cb, cancel_check):
+            downloaded.append(url)
+            dest.write_bytes(payload)
+
+        monkeypatch.setattr(ffmpeg_mod, "_download", fake_download)
         archive = _download_archive(tmp_path, None, None)
         assert downloaded == [mirror_url]
-        assert archive.read_bytes() == b"mirror"
+        assert archive.read_bytes() == payload
 
     def test_upstream_fallback_on_mirror_failure(self, monkeypatch, tmp_path):
         mirror_url = "https://github.com/x/ffmpeg-linux-x86_64-static.tar.xz"
@@ -779,3 +809,20 @@ class TestDownloadArchive:
         monkeypatch.setattr(ffmpeg_mod, "_download", boom)
         with pytest.raises(FfmpegInstallError):
             _download_archive(tmp_path, None, lambda: True)
+
+    def test_mirror_invalid_archive_falls_back_to_upstream(self, monkeypatch, tmp_path):
+        mirror_url = "https://github.com/x/ffmpeg-linux-x86_64-static.tar.xz"
+        upstream_url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: (mirror_url, "a" * 64))
+        monkeypatch.setattr(ffmpeg_mod, "_verify_sha256", lambda *a, **k: None)
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_download_url", lambda cancel_check=None: upstream_url)
+        downloaded = []
+
+        def fake_download(url, dest, progress_cb, cancel_check):
+            dest.write_bytes(b"<html>bot check")
+            downloaded.append(url)
+
+        monkeypatch.setattr(ffmpeg_mod, "_download", fake_download)
+        archive = _download_archive(tmp_path, None, None)
+        assert downloaded == [mirror_url, upstream_url]
+        assert archive.read_bytes() == b"<html>bot check"

@@ -19,6 +19,7 @@
 - [Nápověda v aplikaci](#nápověda-přímo-v-aplikaci)
 - [Potřebuješ pomoct?](#potřebuješ-pomoct)
 - [Podporované systémy](#podporované-systémy)
+- [Historie verzí](#historie-verzí)
 - [Pro vývojáře](#pro-vývojáře)
 - [Licence](#licence)
 
@@ -184,6 +185,12 @@ Prosím nepiš přímo do soukromých zpráv — na Discordu ti pomůže komunit
 | Linux | x86_64, ARM64, ARMv7 (např. Raspberry Pi) |
 | macOS | 12+ (Intel i Apple Silicon) |
 | Android | přes Termux, spuštění ze zdrojového kódu |
+
+---
+
+## Historie verzí
+
+Přehled změn v jednotlivých verzích najdeš v [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
