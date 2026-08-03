@@ -28,7 +28,7 @@ class ConfigManager:
     @classmethod
     def load(cls) -> dict[str, Any]:
         config_path = get_base_dir() / CONFIG_FILE_NAME
-        default_cfg = AppConfig.from_dict({})
+        default_cfg = AppConfig.from_dict(cls.get_default_config())
         if not config_path.exists():
             cls._ensure_output_folder(default_cfg.output_folder)
             return default_cfg.to_dict()

@@ -25,7 +25,6 @@ class VideoMetadata:
     thumbnail: str
     description: str
     available_resolutions: list[int] | None = None
-    language: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict) -> "VideoMetadata":
@@ -36,7 +35,6 @@ class VideoMetadata:
             duration=int(raw_duration) if raw_duration is not None else 0,
             thumbnail=data.get("thumbnail", ""),
             description=data.get("description", ""),
-            language=data.get("language"),
         )
 
 

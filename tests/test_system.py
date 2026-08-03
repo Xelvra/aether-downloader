@@ -1,7 +1,7 @@
 import sys
 
 import stahovac.utils.system as sys_mod
-from stahovac.utils.system import open_folder_in_explorer, open_path
+from stahovac.utils.system import open_path
 
 
 class TestRun:
@@ -172,18 +172,3 @@ class TestRevealInFileManager:
         monkeypatch.setattr(sys_mod, "_open_linux", lambda path: (True, ""))
         ok, _ = sys_mod.reveal_in_file_manager(str(tmp_path))
         assert ok is True
-
-
-class TestOpenFolderInExplorer:
-    def test_nonexistent_path(self):
-        assert open_folder_in_explorer("/nonexistent/path/12345") is False
-
-    def test_existent_path(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Linux")
-        monkeypatch.setattr(sys_mod, "_run", lambda cmd, timeout=10: (True, ""))
-        assert open_folder_in_explorer(str(tmp_path)) is True
-
-    def test_existent_path_resolves_relative(self, monkeypatch):
-        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Linux")
-        monkeypatch.setattr(sys_mod, "_run", lambda cmd, timeout=10: (True, ""))
-        assert open_folder_in_explorer(".") is True

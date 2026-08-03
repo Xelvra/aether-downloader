@@ -30,10 +30,6 @@ def sz(base: int) -> int:
     return int(base * _get_scale())
 
 
-def sz_at(base: int, scale: float) -> int:
-    return int(base * scale)
-
-
 ICON_SIZE = sz(20)
 ICON_SIZE_LARGE = sz(24)
 

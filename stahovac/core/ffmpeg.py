@@ -134,16 +134,6 @@ def find_ffmpeg() -> Path | None:
     return None
 
 
-def ffmpeg_dir() -> Path | None:
-    """Adresář obsahující FFmpeg (a FFprobe) pro ``ffmpeg_location`` yt-dlp."""
-    found = find_ffmpeg()
-    return found.parent if found else None
-
-
-def is_ready() -> bool:
-    return find_ffmpeg() is not None
-
-
 def get_ffmpeg_version() -> str | None:
     """Vrátí verzi FFmpeg (např. ``"6.1.1"``) nebo ``None``, když není k dispozici."""
     binary = find_ffmpeg()

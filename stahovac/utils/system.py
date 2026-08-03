@@ -128,9 +128,3 @@ def reveal_in_file_manager(path_str: str) -> tuple[bool, str]:
         return _reveal_linux(str(path))
     except Exception as exc:  # pragma: no cover - platform dependent
         return False, f"{type(exc).__name__}: {exc}"
-
-
-def open_folder_in_explorer(path_str: str) -> bool:
-    """Zpětně kompatibilní varianta bez zprávy (vrací jen úspěch)."""
-    ok, _ = open_path(path_str)
-    return ok

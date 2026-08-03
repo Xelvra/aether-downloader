@@ -23,7 +23,6 @@ from stahovac.core.ffmpeg import (
     _verify_sha256,
     bin_dir,
     download_and_install,
-    ffmpeg_dir,
     find_ffmpeg,
     get_download_url,
     get_ffmpeg_version,
@@ -323,27 +322,6 @@ class TestWaitUntilReady:
 
         threading.Thread(target=finish, daemon=True).start()
         assert wait_until_ready(timeout=10) is False
-
-
-class TestIsReady:
-    def test_true_when_found(self, monkeypatch):
-        monkeypatch.setattr(ffmpeg_mod, "find_ffmpeg", lambda: Path("/usr/bin/ffmpeg"))
-        assert ffmpeg_mod.is_ready() is True
-
-    def test_false_when_missing(self, monkeypatch):
-        monkeypatch.setattr(ffmpeg_mod, "find_ffmpeg", lambda: None)
-        assert ffmpeg_mod.is_ready() is False
-
-
-class TestFfmpegDir:
-    def test_returns_parent(self, monkeypatch, base):
-        monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: "/opt/ffmpeg/bin/ffmpeg")
-        assert ffmpeg_dir() == Path("/opt/ffmpeg/bin")
-
-    def test_none_when_missing(self, monkeypatch, base):
-        monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
-        monkeypatch.setattr(ffmpeg_mod, "_MACOS_HOMEBREW_PATHS", ())
-        assert ffmpeg_dir() is None
 
 
 class TestResolveDownloadUrl:
