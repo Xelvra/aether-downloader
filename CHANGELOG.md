@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- _(zatím žádné změny)_
+
+## [1.3.4] – 2026-08-03
+
 ### Přidáno
 - Bezpečnost: `SECURITY.md` (privátní hlášení zranitelností), Dependabot (pip + GitHub Actions) a CI audit zranitelností přes OSV-Scanner.
 - GitHub meta: šablony pro issue (bug report, feature request), šablona pull requestu a `CODE_OF_CONDUCT.md`.
