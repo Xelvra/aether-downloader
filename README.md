@@ -123,8 +123,6 @@ Pro ruční instalaci zkopíruj příkaz podle svého systému do terminálu (Wi
 | macOS (Homebrew) | `brew install ffmpeg` |
 | Android (Termux) | `pkg install ffmpeg` |
 
-Nevíš si rady s příkazovým řádkem? V aplikaci v nápovědě (ikona ❓) najdeš podrobný návod krok za krokem pro každý systém.
-
 ---
 
 ## Jak stáhnout první video
