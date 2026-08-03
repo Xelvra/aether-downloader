@@ -546,6 +546,7 @@ class TestDownloadAndInstall:
 
     def test_unexpected_error_wrapped(self, monkeypatch, base):
         monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: None)
+
         def boom():
             raise ValueError("boom")
 
@@ -676,7 +677,13 @@ class TestResolveMirror:
     def test_missing_sha_asset_returns_none(self, monkeypatch):
         assets = [{"name": self._ASSET, "browser_download_url": "https://x/ffmpeg.tar.xz"}]
         self._http_fake(monkeypatch, assets, sha_data=None)
-        monkeypatch.setattr(ffmpeg_mod, "_http_get", lambda url, cancel_check=None, max_bytes=1 << 20: json.dumps({"assets": assets}).encode() if url == ffmpeg_mod.GITHUB_RELEASES_LATEST else None)
+        monkeypatch.setattr(
+            ffmpeg_mod,
+            "_http_get",
+            lambda url, cancel_check=None, max_bytes=1 << 20: (
+                json.dumps({"assets": assets}).encode() if url == ffmpeg_mod.GITHUB_RELEASES_LATEST else None
+            ),
+        )
         assert _resolve_mirror() is None
 
     def test_bad_sha_format_returns_none(self, monkeypatch):

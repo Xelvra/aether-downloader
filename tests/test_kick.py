@@ -1,3 +1,13 @@
+"""Testy Kick adaptéru.
+
+Všechna síťová volání (`_api_get`, `_fetch_url`) jsou v testech mockovaná –
+kód nikdy nekontaktuje skutečný Kick server. Fiktivní kanál v testovacích
+datech (`test-streamer`) není reálný účet, takže testy nepotřebují existující
+kanál ani subscription a nemůžou žádný skutečný kanál poškodit (smazat či
+zamknout) opakovaným scrapováním. Reálné sub-only VOD ověřuj jen ručně a jen
+na kanálu, který ti patří.
+"""
+
 from types import SimpleNamespace
 from urllib.error import HTTPError
 
@@ -244,7 +254,7 @@ class TestFetchVodData:
 
 
 class TestFetchVodPage:
-    URL = "https://kick.com/aethercosmologyczsk/videos/019fb6ea-0d60-75ca-8756-11f0d8b1f817"
+    URL = "https://kick.com/test-streamer/videos/019fb6ea-0d60-75ca-8756-11f0d8b1f817"
     M3U8 = (
         "https://fa723fc1b171.us-west-2.playback.live-video.net/api/video/v1/"
         "us-west-2.196233775518.channel.YNnlAxotHfyv.m3u8?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzM4NCJ9"
@@ -252,7 +262,7 @@ class TestFetchVodPage:
     PAGE = (
         '<script>self.__next_f.push([1,"'
         r"\"category\":{\"id\":15,\"name\":\"Just Chatting\",\"slug\":\"just-chatting\"},"
-        r"\"channel\":{\"id\":50494549,\"slug\":\"aethercosmologyczsk\",\"username\":\"AetherCosmologyczsk\"},"
+        r"\"channel\":{\"id\":50494549,\"slug\":\"test-streamer\",\"username\":\"TestStreamer\"},"
         r"\"duration\":54543,\"end_time\":\"2026-07-31T21:54:21Z\",\"id\":\"019fb6ea-0d60-75ca-8756-11f0d8b1f817\","
         r"\"is_live\":false,\"language\":\"cs\",\"status\":\"sub_only\","
         r"\"thumbnail\":{\"src\":\"https://images.kick.com/thumb.webp\",\"srcSet\":\"https://images.kick.com/1080.webp 1920w\"},"
@@ -270,8 +280,8 @@ class TestFetchVodPage:
         assert result["view_count"] == 3214
         assert result["language"] == "cs"
         assert result["categories"] == [{"name": "Just Chatting"}]
-        assert result["channel"] == "aethercosmologyczsk"
-        assert result["user"] == {"id": "50494549", "username": "AetherCosmologyczsk"}
+        assert result["channel"] == "test-streamer"
+        assert result["user"] == {"id": "50494549", "username": "TestStreamer"}
         assert result["thumbnail"] == {"src": "https://images.kick.com/thumb.webp"}
         assert result["source"] == self.M3U8
 
