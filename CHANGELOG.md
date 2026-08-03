@@ -2,11 +2,19 @@
 
 ## [Unreleased]
 
+### Přidáno
+- Bezpečnost: `SECURITY.md` (privátní hlášení zranitelností), Dependabot (pip + GitHub Actions) a CI audit zranitelností přes OSV-Scanner.
+- GitHub meta: šablony pro issue (bug report, feature request), šablona pull requestu a `CODE_OF_CONDUCT.md`.
+
 ### Opraveno
 - README: nefunkční odkazy na sekci Android – emoji `📱` v nadpisu mění GitHub kotvu na `#-android-pro-pokročilejší-uživatele`, odkazy ukazovaly na kotvu bez úvodní pomlčky.
 
 ### Změněno
-- Dokumentace: README a CONTRIBUTING – poznámka k testování platforem (Linux 100 %, Windows přes Wine, macOS/ostatní buildy komunitou).
+- CI: testy navíc na Windows a macOS (GUI testy zůstávají na Ubuntu), kontrola `ruff format --check`, release ověřuje shodu tagu `v*` s `APP_VERSION`.
+- README: sekce **Ukázky** se screenshoty aplikace, CI badge, upřesněná formulace podporovaných webů (přes yt-dlp).
+- Nápověda: obsah oddělený od vykreslování do `stahovac/help_content.py` (datová vrstva + testy struktury).
+- Kick testy: plně mockované, testovací data používají fiktivní kanál – žádný reálný účet ani subscription, žádné riziko poškození skutečného kanálu.
+- Dokumentace: README a CONTRIBUTING – poznámka k testování platforem (Linux 100 %, Windows přes Wine, macOS/ostatní buildy komunitou); README – odstraněna věta o nápovědě k příkazům pro instalaci FFmpeg.
 
 ## [1.3.3] – 2026-08-03
 

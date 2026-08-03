@@ -1,6 +1,6 @@
 # Aether Downloader
 
-> Jednoduchá aplikace na stahování videí z YouTube, Kicku, Twitche a mnoha dalších webů.
+> Jednoduchá aplikace na stahování videí z YouTube, Kicku, Twitche a stovek dalších webů (přes yt-dlp).
 
 **Žádný terminál, žádné příkazy, žádné technické znalosti** (na počítači — Windows, Linux i macOS). Vložíš odkaz, klikneš na tlačítko a video se ti uloží do počítače. Android se spouští ze zdrojového kódu, proto vyžaduje terminál — viz [sekce níže](#-android-pro-pokročilejší-uživatele).
 
@@ -8,11 +8,13 @@
 
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 ![Platformy](https://img.shields.io/badge/platformy-Windows%20%7C%20Linux%20%7C%20macOS%20%7C%20Android-blue)
+[![CI](https://github.com/Xelvra/aether-downloader/actions/workflows/ci.yml/badge.svg)](https://github.com/Xelvra/aether-downloader/actions/workflows/ci.yml)
 
 ---
 
 ## Obsah
 
+- [Ukázky](#ukázky)
 - [Rychlý start](#rychlý-start-3-kroky)
 - [Instalace](#instalace-a-spuštění)
 - [FFmpeg](#ffmpeg-instaluje-se-automaticky)
@@ -34,6 +36,14 @@
 3. Hotovo — video je tvoje.
 
 Podrobný postup pro konkrétní systém najdeš níže (Android viz [zde](#-android-pro-pokročilejší-uživatele)).
+
+---
+
+## Ukázky
+
+| Stahování | Ořez a kvalita | Nastavení |
+|---|---|---|
+| ![Hlavní karta](docs/screenshots/download.png) | ![Ořez a kvalita](docs/screenshots/crop.png) | ![Nastavení](docs/screenshots/settings.png) |
 
 ---
 
