@@ -2,7 +2,7 @@
 
 > Jednoduchá aplikace na stahování videí z YouTube, Kicku, Twitche a mnoha dalších webů.
 
-**Žádný terminál, žádné příkazy, žádné technické znalosti** (na počítači — Windows, Linux i macOS). Vložíš odkaz, klikneš na tlačítko a video se ti uloží do počítače. Android se spouští ze zdrojového kódu, proto vyžaduje terminál — viz [sekce níže](#android-pro-pokročilejší-uživatele).
+**Žádný terminál, žádné příkazy, žádné technické znalosti** (na počítači — Windows, Linux i macOS). Vložíš odkaz, klikneš na tlačítko a video se ti uloží do počítače. Android se spouští ze zdrojového kódu, proto vyžaduje terminál — viz [sekce níže](#-android-pro-pokročilejší-uživatele).
 
 > ℹ️ Aplikace se uživatelsky jmenuje **Aether Downloader**, ale soubory, binárky i balíček se vnitřně jmenují **`stahovac`** — je to jen interní název, jde o stejnou aplikaci.
 
@@ -33,7 +33,7 @@
 2. Spusť aplikaci, vlož odkaz na video a klikni na **Stáhnout**. K ořezu a MP3 je potřeba **FFmpeg** — na macOS je už součástí aplikace, na Windows/Linuxu si ho aplikace sama stáhne při prvním použití.
 3. Hotovo — video je tvoje.
 
-Podrobný postup pro konkrétní systém najdeš níže (Android viz [zde](#android-pro-pokročilejší-uživatele)).
+Podrobný postup pro konkrétní systém najdeš níže (Android viz [zde](#-android-pro-pokročilejší-uživatele)).
 
 ---
 

@@ -2,7 +2,11 @@
 
 ## [Unreleased]
 
-- _(zatím žádné změny)_
+### Opraveno
+- README: nefunkční odkazy na sekci Android – emoji `📱` v nadpisu mění GitHub kotvu na `#-android-pro-pokročilejší-uživatele`, odkazy ukazovaly na kotvu bez úvodní pomlčky.
+
+### Změněno
+- Dokumentace: README a CONTRIBUTING – poznámka k testování platforem (Linux 100 %, Windows přes Wine, macOS/ostatní buildy komunitou).
 
 ## [1.3.3] – 2026-08-03
 
