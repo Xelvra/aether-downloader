@@ -12,6 +12,7 @@ Vyžaduje prohlížeč: ``uv run playwright install chromium`` (jinak se přesko
 """
 
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -49,6 +50,25 @@ def _wait_ready(url: str, timeout: float = 30.0) -> None:
     pytest.fail(f"Web server aplikace se nespustil ({url})")
 
 
+def _terminate_proc(proc) -> None:
+    """Ukončí proces i s případnými child procesy (procesová skupina / taskkill).
+
+    ``proc.terminate()`` posílá signál jen přímému procesu; flet server může
+    mít potomky, které by jinak zůstaly viset jako sirotci.
+    """
+    try:
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)], capture_output=True, check=False)
+        else:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except (OSError, ProcessLookupError, ValueError):  # proces už skončil
+        proc.kill()
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+
 @pytest.fixture(scope="module")
 def gui_page():
     playwright = pytest.importorskip("playwright.sync_api")
@@ -65,6 +85,7 @@ def gui_page():
             env=env,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            start_new_session=True,
         )
         try:
             _wait_ready(f"http://127.0.0.1:{port}")
@@ -77,11 +98,7 @@ def gui_page():
                 yield browser, f"http://127.0.0.1:{port}"
                 browser.close()
         finally:
-            proc.terminate()
-            try:
-                proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                proc.kill()
+            _terminate_proc(proc)
 
 
 def _open(gui_page, width: int = 1000, height: int = 800):
@@ -125,6 +142,35 @@ class TestGuiLoads:
         assert "Aether Downloader" in page.title()
         assert "Beta" in page.title()
         page.close()
+
+
+class TestServerCleanup:
+    def test_server_process_fully_terminated(self):
+        """Po ukončení serveru (terminate helper) nesmí zůstat žádný proces."""
+        port = _free_port()
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {
+                **os.environ,
+                "AETHER_BASE_DIR": tmp,
+                "AETHER_PORT": str(port),
+            }
+            proc = subprocess.Popen(
+                [sys.executable, "-m", "stahovac", "--web", "--host", "127.0.0.1", "--port", str(port)],
+                cwd=ROOT,
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            try:
+                _wait_ready(f"http://127.0.0.1:{port}")
+                assert proc.poll() is None, "Server měl běžet"
+            finally:
+                _terminate_proc(proc)
+        assert proc.poll() is not None, "Server se po ukončení neuzavřel"
+        if sys.platform != "win32":
+            with pytest.raises(ProcessLookupError):
+                os.getpgid(proc.pid)
 
     def test_no_page_errors(self, gui_page):
         browser, base = gui_page

@@ -2,12 +2,20 @@
 
 ## [Unreleased]
 
+- _(zatím žádné změny)_
+
+## [1.3.3] – 2026-08-03
+
 ### Přidáno
-- GUI regresní testy (Playwright) – aplikace se spouští ve web režimu, ověřuje se vykreslení, přepínání karet a responsive layout přes aria snapshot baseline.
+- GUI regresní testy (Playwright) – aplikace se spouští ve web režimu, ověřuje se vykreslení, přepínání karet a responsive layout přes aria snapshot baseline (`tests/gui_baselines/`), screenshoty jako CI artefakt.
 
 ### Opraveno
-- Dvojitá informace o průběhu instalace FFmpeg – podrobný progress (procenta, rychlost, zbývající čas) se zobrazuje jen ve společném pruhu aplikace; v Nastavení zůstává jednoduchý status „Stahuji FFmpeg…".
-- Plynulejší roztažení okna – karty v horní liště se roztahují rovnoměrně, mezery mezi ikonami už neskáčou při změně šířky okna.
+- Orphan procesy: SIGTERM teď vede na čisté ukončení (proběhne atexit cleanup child procesů); testy GUI zabíjejí celou procesovou skupinu, takže po ukončení serveru nezůstává viset žádný proces.
+- Dvojitá informace o průběhu instalace FFmpeg – podrobný progress (procenta, rychlost, zbývající čas) se zobrazuje jen ve společném pruhu aplikace; v Nastavení zůstává jednoduchý status „Stahuji FFmpeg…" (dokončení 1.3.2).
+- Plynulejší roztažení okna – karty v horní liště se roztahují rovnoměrně, mezery mezi ikonami už neskáčou při změně šířky okna (dokončení 1.3.2).
+
+### Změněno
+- Dokumentace: README (macOS má FFmpeg přibalený, sjednocená FFmpeg sekce, podporované systémy bez falešné Linux ARM binárky, vysvětlení názvu „stahovac"), LICENSE-THIRD-PARTY (GitHub mirror jako primární zdroj FFmpeg + licence zabalených Python závislostí), CONTRIBUTING (Playwright, bezpečnostní varování k `--host 0.0.0.0`, odstraněny zastaralé DMG zmínky), CHANGELOG (sjednocené pořadí kategorií).
 
 ## [1.3.2] – 2026-08-03
 
@@ -21,15 +29,12 @@
 
 ## [1.3.1] – 2026-08-03
 
-### Opraveno
-- FFmpeg mirror asset se při buildu validuje (magické byty + velikost) – neplatný archiv se už nenahraje do release.
-- Aplikace při neplatném mirror archivu spadne na oficiální upstream (oprava korupčního Linux assetu z v1.3.0).
-
 ### Přidáno
 - `CHANGELOG.md` s historií všech verzí a odkaz v README.
 
-### Změněno
-- Verze 1.3.1.
+### Opraveno
+- FFmpeg mirror asset se při buildu validuje (magické byty + velikost) – neplatný archiv se už nenahraje do release.
+- Aplikace při neplatném mirror archivu spadne na oficiální upstream (oprava korupčního Linux assetu z v1.3.0).
 
 ## [1.3.0] – 2026-08-03
 
@@ -41,18 +46,20 @@
 - Release workflow se spouští jen po pushnutí tagu `v*` (ruční Run workflow = čistý test buildů bez publikace).
 
 ### Opraveno
-- Tokeny a cookies už neunikají do logu (sanitizace příkazů FFmpeg).
 - CRF se validuje jen při zapnutém překódování (prázdné pole už neblokuje ořez bez re-encode).
 - Smoke test na macOS ověřuje přibalený FFmpeg uvnitř `.app`.
 - CI akce přesunuty na Node 24 (zmizelo varování o deprecation Node 20).
-- Odstraněn mrtvý kód (`ffmpeg_dir`, `is_ready`, `sz_at`, `open_folder_in_explorer`, `VideoMetadata.language`).
+
+### Bezpečnost
+- Tokeny a cookies už neunikají do logu (sanitizace příkazů FFmpeg).
+
+### Změněno
+- `LICENSE-THIRD-PARTY.md` a nápověda odpovídají realitě distribuce FFmpeg.
 
 ### Odstraněno
 - Banner „FFmpeg není nainstalován" a hláška při spuštění aplikace.
 - Rušivá poznámka k cookies v Nastavení (patří do nápovědy).
-
-### Změněno
-- `LICENSE-THIRD-PARTY.md` a nápověda odpovídají realitě distribuce FFmpeg.
+- Mrtvý kód (`ffmpeg_dir`, `is_ready`, `sz_at`, `open_folder_in_explorer`, `VideoMetadata.language`).
 
 ## [1.2.9] – 2026-08-02
 

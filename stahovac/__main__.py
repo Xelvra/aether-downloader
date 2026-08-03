@@ -222,8 +222,26 @@ def parse_args(argv=None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _install_signal_handlers() -> None:
+    """SIGTERM vede na čisté ukončení, aby proběhl atexit cleanup child procesů.
+
+    Ctrl+C (SIGINT) řeší flet sám a Python při něm atexit spustí automaticky.
+    U SIGTERM (např. při ukončování serveru z testů) by default žádný cleanup
+    neproběhl a případné child procesy (FFmpeg/yt-dlp) by zůstaly viset.
+    """
+    import contextlib
+    import signal
+
+    def _on_sigterm(signum, frame):
+        raise SystemExit(0)
+
+    with contextlib.suppress(ValueError, OSError):
+        signal.signal(signal.SIGTERM, _on_sigterm)
+
+
 def run(argv=None) -> None:
     _setup_runtime()
+    _install_signal_handlers()
     args = parse_args(argv)
 
     if args.check:

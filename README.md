@@ -2,7 +2,9 @@
 
 > Jednoduchá aplikace na stahování videí z YouTube, Kicku, Twitche a mnoha dalších webů.
 
-**Žádný terminál, žádné příkazy, žádné technické znalosti.** Vložíš odkaz, klikneš na tlačítko a video se ti uloží do počítače.
+**Žádný terminál, žádné příkazy, žádné technické znalosti** (na počítači — Windows, Linux i macOS). Vložíš odkaz, klikneš na tlačítko a video se ti uloží do počítače. Android se spouští ze zdrojového kódu, proto vyžaduje terminál — viz [sekce níže](#android-pro-pokročilejší-uživatele).
+
+> ℹ️ Aplikace se uživatelsky jmenuje **Aether Downloader**, ale soubory, binárky i balíček se vnitřně jmenují **`stahovac`** — je to jen interní název, jde o stejnou aplikaci.
 
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 ![Platformy](https://img.shields.io/badge/platformy-Windows%20%7C%20Linux%20%7C%20macOS%20%7C%20Android-blue)
@@ -13,10 +15,10 @@
 
 - [Rychlý start](#rychlý-start-3-kroky)
 - [Instalace](#instalace-a-spuštění)
-- [Instalace FFmpeg](#instalace-ffmpeg-nutný-krok)
+- [FFmpeg](#ffmpeg-instaluje-se-automaticky)
 - [Jak stáhnout první video](#jak-stáhnout-první-video)
-- [Přehled funkcí](#co-všechno-aplikace-umí)
-- [Nápověda v aplikaci](#nápověda-přímo-v-aplikaci)
+- [Co všechno aplikace umí](#co-všechno-aplikace-umí)
+- [Nápověda přímo v aplikaci](#nápověda-přímo-v-aplikaci)
 - [Potřebuješ pomoct?](#potřebuješ-pomoct)
 - [Podporované systémy](#podporované-systémy)
 - [Historie verzí](#historie-verzí)
@@ -28,10 +30,10 @@
 ## Rychlý start (3 kroky)
 
 1. Stáhni si aplikaci pro svůj počítač ze sekce [Releases](https://github.com/Xelvra/aether-downloader/releases).
-2. Spusť aplikaci, vlož odkaz na video a klikni na **Stáhnout**. Když ořez nebo MP3 vyžaduje **FFmpeg** a ten není nainstalovaný, aplikace si ho sama stáhne a nainstaluje – bez dalšího tlačítka.
+2. Spusť aplikaci, vlož odkaz na video a klikni na **Stáhnout**. K ořezu a MP3 je potřeba **FFmpeg** — na macOS je už součástí aplikace, na Windows/Linuxu si ho aplikace sama stáhne při prvním použití.
 3. Hotovo — video je tvoje.
 
-Podrobný postup pro konkrétní systém najdeš níže.
+Podrobný postup pro konkrétní systém najdeš níže (Android viz [zde](#android-pro-pokročilejší-uživatele)).
 
 ---
 
@@ -43,7 +45,7 @@ Podrobný postup pro konkrétní systém najdeš níže.
 2. Soubor se nemusí rozbalovat — stačí na něj poklepat.
 3. Windows pravděpodobně zobrazí modrou obrazovku s varováním — to je normální, protože aplikace nemá placený certifikát od Microsoftu. Klikni na **Další informace** → **Přesto spustit**.
 
-> ⚠️ Potřebný **FFmpeg** si aplikace stáhne a nainstaluje sama, když ho poprvé využiješ (ořez nebo MP3) — viz [sekce níže](#instalace-ffmpeg-nutný-krok).
+> ⚠️ K ořezu a MP3 si aplikace **FFmpeg** při prvním použití stáhne sama (viz [FFmpeg](#ffmpeg-instaluje-se-automaticky)).
 
 ### 🐧 Linux
 
@@ -60,7 +62,7 @@ Podrobný postup pro konkrétní systém najdeš níže.
    ```
 3. Poklepej na soubor `stahovac-linux-x86_64` a aplikace se spustí.
 
-> ⚠️ Potřebný **FFmpeg** si aplikace stáhne a nainstaluje sama, když ho poprvé využiješ — viz [sekce níže](#instalace-ffmpeg-nutný-krok).
+> ⚠️ K ořezu a MP3 si aplikace **FFmpeg** při prvním použití stáhne sama (viz [FFmpeg](#ffmpeg-instaluje-se-automaticky)).
 
 ### 🍎 macOS
 
@@ -74,7 +76,7 @@ Podrobný postup pro konkrétní systém najdeš níže.
    - **Pravé tlačítko na `stahovac.app` → Otevřít → Otevřít**, nebo
    - **Nastavení systému → Soukromí a zabezpečení** → sjeď dolů, najdi hlášku o zablokované aplikaci a klikni na **Otevřít přesto**.
 
-> ⚠️ Potřebný **FFmpeg** si aplikace stáhne a nainstaluje sama, když ho poprvé využiješ — viz [sekce níže](#instalace-ffmpeg-nutný-krok).
+> ✅ **FFmpeg je součástí aplikace** — na macOS se přibaluje přímo do `.app`, takže ho nemusíš stahovat ani instalovat.
 
 > 📂 Stažená videa a nastavení se ukládají do **`~/Library/Application Support/AetherDownloader/`** — ne do samotné aplikace. Složku si můžeš změnit v Nastavení.
 
@@ -103,11 +105,12 @@ Termux vypíše webovou adresu — otevři ji v prohlížeči telefonu. Podrobno
 
 ---
 
-## Instalace FFmpeg (nutný krok)
+## FFmpeg (instaluje se automaticky)
 
 Aplikace potřebuje **FFmpeg** k ořezu videa nebo převodu na MP3.
 
-**Nejjednodušší varianta:** nemusíš dělat nic. Když aplikaci ořez nebo MP3 poprvé využije, **FFmpeg si sama stáhne a nainstaluje** do složky `bin/` vedle aplikace – průběh uvidíš jako u běžného stahování. Stav FFmpeg a případné ruční stažení/přeinstalaci najdeš v aplikaci na kartě **Nastavení**.
+- **macOS** — FFmpeg je **přibalený přímo v aplikaci**, nic se nestahuje ani nenastavuje.
+- **Windows a Linux** — k ořezu nebo MP3 si aplikace **FFmpeg sama stáhne a nainstaluje** při prvním použití (průběh uvidíš jako u běžného stahování). Stav FFmpeg a případné ruční stažení/přeinstalaci najdeš v aplikaci na kartě **Nastavení**.
 
 Pro ruční instalaci zkopíruj příkaz podle svého systému do terminálu (Windows: PowerShell, macOS/Linux: Terminál):
 
@@ -150,7 +153,7 @@ Stahování lze kdykoliv zrušit tlačítkem **Zrušit**.
 | Zrušení stahování | Jedním kliknutím stahování kdykoliv zastavíš |
 | Výběr složky | Sám si zvolíš, kam se má video uložit |
 | Kick a Twitch | Vyžaduje jednorázové nastavení cookies v Nastavení (návod v nápovědě) |
-| Automatické stažení FFmpeg | Chybí-li FFmpeg, aplikace ho sama stáhne a nainstaluje při prvním použití |
+| Automatické stažení FFmpeg | Na Windows/Linuxu si aplikace FFmpeg sama stáhne a nainstaluje při prvním použití (na macOS je přibalený) |
 | Ukládání nastavení | Vše se ukládá automaticky, není potřeba nic potvrzovat |
 
 ---
@@ -182,7 +185,7 @@ Prosím nepiš přímo do soukromých zpráv — na Discordu ti pomůže komunit
 | Systém | Podpora |
 |---|---|
 | Windows | 10/11 (x86_64) |
-| Linux | x86_64, ARM64, ARMv7 (např. Raspberry Pi) |
+| Linux | x86_64 (hotová binárka z Releases); ARM64/ARMv7 (např. Raspberry Pi) ze zdrojového kódu |
 | macOS | 12+ (Intel i Apple Silicon) |
 | Android | přes Termux, spuštění ze zdrojového kódu |
 

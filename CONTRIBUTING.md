@@ -15,7 +15,7 @@ Děkujeme za zájem přispět do Aether Downloaderu. Tento dokument popisuje, ja
 - [Technologie](#technologie)
 - [Vývoj na bezhlavém systému](#vývoj-na-bezhlavém-systému-ssh-android-termux)
 - [Sestavení binárky](#sestavení-binárky)
-- [CI/CD](#ci-github-actions)
+- [CI (GitHub Actions)](#ci-github-actions)
 - [yt-dlp jako knihovna](#yt-dlp-jako-knihovna)
 - [Řešení problémů](#řešení-problémů)
 - [Pravidla pro pull requesty](#pravidla-pro-pull-requesty)
@@ -31,7 +31,7 @@ Děkujeme za zájem přispět do Aether Downloaderu. Tento dokument popisuje, ja
 | [uv](https://docs.astral.sh/uv/) | nejnovější | správce balíčků a virtuálních prostředí |
 | FFmpeg | libovolná | volitelné pro běh, ale nutné pro testy ořezu/konverze |
 | binutils (`strip`) | — | pouze pro sestavení binárky na Linuxu |
-| `create-dmg` | — | pouze pro sestavení DMG na macOS |
+| Playwright + Chromium | — | jen pro GUI testy — `uv run playwright install chromium` |
 
 ---
 
@@ -56,7 +56,7 @@ aether-downloader/
 │   ├── app.py                  # Propojení GUI s logikou (main → GuiApp)
 │   ├── downloader.py           # DownloadManager (jediný zdroj pravdy o stavu, job ID, filtrace stale jobů)
 │   ├── state.py                # Stav aplikace (AppState)
-│   ├── models.py                # Datové modely (VideoMetadata, DownloadParams) + enum DownloadState
+│   ├── models.py               # Datové modely (VideoMetadata, DownloadParams) + enum DownloadState
 │   ├── config/
 │   │   ├── __init__.py         # Inicializace balíčku config
 │   │   ├── app_config.py       # AppConfig dataclass (schema_version 2, koerce typů, validace CRF/presetů)
@@ -148,6 +148,7 @@ uv run python main.py
 | **Mypy** | Statická typová kontrola (i neotypované funkce, `check_untyped_defs`) | `uv run mypy stahovac/` |
 | **Pytest** | Testy | `uv run pytest` |
 | **Pytest-cov** | Pokrytí (práh **80 %**, jinak selže) | `uv run pytest --cov` |
+| **Playwright** | GUI testy (`tests/test_gui_web.py`) — viz sekci CI níže | `uv run pytest tests/test_gui_web.py` |
 
 Před odesláním PR spusť aspoň `ruff check .` a `mypy stahovac/`.
 
@@ -224,6 +225,8 @@ Výchozí adresa je `http://127.0.0.1:8000`. Pro připojení z jiného zařízen
 uv run python main.py --web --host 0.0.0.0 --port 8000
 ```
 
+> ⚠️ **Pozor:** server nemá žádné přihlášení. Adresa `0.0.0.0` zpřístupní aplikaci všem zařízením v síti — kdokoli pak může procházet soubory a spouštět stahování. Používej jen v důvěryhodné síti, ideálně s omezením přes firewall.
+
 | CLI přepínač | Proměnná prostředí | Výchozí hodnota | Popis |
 |---|---|---|---|
 | `--web` / `-w` | — | vypnuto | vynutí webový režim i na systému s displejem |
@@ -274,7 +277,7 @@ sudo pacman -S binutils        # Arch Linux
 sudo dnf install binutils      # Fedora
 ```
 
-**macOS** — pro DMG instalační balíček je potřeba `create-dmg`.
+**macOS** — release se balí jako `.app.zip` (viz CI), DMG se v procesu nevytváří.
 
 **Android** — PyInstaller binárky pro Linux nelze na Androidu spustit; na Termuxu se aplikace vždy spouští ze zdrojového kódu (viz [výše](#vývoj-na-bezhlavém-systému-ssh-android-termux)).
 
@@ -375,7 +378,7 @@ Podporovaná verze yt-dlp je ohraničená v `pyproject.toml` (`yt-dlp>=2024.12.0
 | `uv sync` selže na zámku závislostí | Zkontroluj, že `uv.lock` odpovídá `pyproject.toml`: `uv sync --locked`. Pokud ne, spusť `uv lock` a commitni aktualizovaný lockfile. |
 | `pytest --cov` selže na pokrytí | Práh je 80 %. Přidej testy pro nově napsaný kód, nebo zkontroluj, že jsi neodstranil existující testy. |
 | Sestavení na Linuxu selže na `strip` | Chybí `binutils` — nainstaluj podle [sekce Sestavení binárky](#sestavení-binárky). |
-| Build na macOS nevytvoří DMG | Chybí `create-dmg` — nainstaluj přes Homebrew (`brew install create-dmg`). |
+| GUI testy se přeskočí | Není nainstalovaný Chromium — spusť `uv run playwright install chromium`. |
 | FFmpeg se nenajde ani po instalaci | Ověř, že je v systémovém `PATH` (`ffmpeg -version` v terminálu), nebo nech aplikaci stáhnout vlastní kopii do `bin/`. |
 | Testy Kick selžou po upgradu yt-dlp | Zkontroluj rozsah verze v `pyproject.toml` a spusť `test_installed_version_within_supported_range`; může být potřeba aktualizovat patch v `stahovac/platforms/kick.py`. |
 
