@@ -423,13 +423,14 @@ class GuiApp:
             bgcolor=COLOR_SURFACE if is_active else None,
             border_radius=sz(8),
             ink=False,
+            expand=True,
             tooltip=label if compact else None,
             on_click=lambda e: self._switch_tab(index),
         )
 
     def _update_tab_bar(self):
         if not getattr(self, "_tab_buttons_row", None):
-            self._tab_buttons_row = ft.Row(spacing=4, alignment=ft.MainAxisAlignment.SPACE_AROUND)
+            self._tab_buttons_row = ft.Row(spacing=2, alignment=ft.MainAxisAlignment.CENTER)
         self._tab_buttons_row.controls = [
             self._make_tab_button("Stahování", ft.Icons.DOWNLOAD_ROUNDED, 0),
             self._make_tab_button("Ořez", ft.Icons.CUT_ROUNDED, 1),
@@ -504,14 +505,14 @@ class GuiApp:
         self._ffmpeg_installing = True
         self._last_ffmpeg_progress = 0.0
         self._set_ffmpeg_progress(None)
-        self._run_ui_thread(self.storage_view.set_ffmpeg_installing, True, "Instaluji FFmpeg…")
+        self._run_ui_thread(self.storage_view.set_ffmpeg_installing, True, "Stahuji FFmpeg…")
         threading.Thread(target=self._ffmpeg_install_worker, daemon=True).start()
         self._safe_page_update()
 
     def _set_ffmpeg_progress(self, percent: float | None):
         self._progress_bar.visible = True
         self._progress_bar.value = percent / 100.0 if percent is not None else None
-        self._status_text.value = "Instaluji FFmpeg…"
+        self._status_text.value = "Stahuji FFmpeg…"
         self._status_text.color = COLOR_WARN
 
     def _ffmpeg_install_worker(self):
@@ -531,12 +532,11 @@ class GuiApp:
             if now - self._last_ffmpeg_progress < 0.15:
                 return
             self._last_ffmpeg_progress = now
-            text = f"Instaluji FFmpeg… {percent:.1f}%  \u2022  {speed}  \u2022  Zbývá: {eta}"
+            text = f"Stahuji FFmpeg… {percent:.1f}%  \u2022  {speed}  \u2022  Zbývá: {eta}"
             self._progress_bar.visible = True
             self._progress_bar.value = percent / 100.0
             self._status_text.value = text
             self._status_text.color = COLOR_WARN
-            self.storage_view.set_ffmpeg_installing(True, text)
             self._safe_page_update()
 
     def _apply_ffmpeg_install_done(self, ok: bool):

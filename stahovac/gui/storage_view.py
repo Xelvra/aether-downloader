@@ -203,7 +203,7 @@ class StorageView:
         self._ffmpeg_installing = installing
         if installing:
             self.ffmpeg_install_btn.visible = False
-            self.ffmpeg_status_text.value = text or "Instaluji FFmpeg…"
+            self.ffmpeg_status_text.value = text or "Stahuji FFmpeg…"
             self.ffmpeg_status_text.color = COLOR_WARN
         else:
             self.refresh_ffmpeg_status()

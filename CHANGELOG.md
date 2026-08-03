@@ -2,7 +2,9 @@
 
 ## [Unreleased]
 
-- _(zatím žádné změny)_
+### Opraveno
+- Dvojitá informace o průběhu instalace FFmpeg – podrobný progress (procenta, rychlost, zbývající čas) se zobrazuje jen ve společném pruhu aplikace; v Nastavení zůstává jednoduchý status „Stahuji FFmpeg…".
+- Plynulejší roztažení okna – karty v horní liště se roztahují rovnoměrně, mezery mezi ikonami už neskáčou při změně šířky okna.
 
 ## [1.3.2] – 2026-08-03
 
