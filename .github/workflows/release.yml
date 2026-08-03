@@ -89,7 +89,9 @@ jobs:
               Write-Error "Přibalený FFmpeg nebyl nalezen (ffmpeg check selhal)."
               exit 1
             }
-            if ($ff.detail -notmatch "Contents/MacOS/_internal") {
+            # flet/PyInstaller ukládá binárky do Contents/Frameworks – kontrola,
+            # že FFmpeg je uvnitř .app bundle, ne ze systému (Homebrew).
+            if ($ff.detail -notmatch "stahovac\.app/Contents/") {
               Write-Error "FFmpeg nalezen mimo bundle: $($ff.detail)"
               exit 1
             }
