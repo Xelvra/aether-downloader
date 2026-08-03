@@ -13,11 +13,14 @@ from stahovac.core.ffmpeg import (
     EVERMEET_INFO_URL,
     FfmpegInstallError,
     _download,
+    _download_archive,
     _extract,
     _find_binaries,
     _http_get,
     _resolve_download_url,
+    _resolve_mirror,
     _smoke_test,
+    _verify_sha256,
     bin_dir,
     download_and_install,
     ffmpeg_dir,
@@ -25,6 +28,7 @@ from stahovac.core.ffmpeg import (
     get_download_url,
     get_ffmpeg_version,
     install_in_progress,
+    mirror_asset_name,
     wait_until_ready,
 )
 from stahovac.utils.paths import set_base_dir
@@ -518,6 +522,7 @@ class TestFindBinaries:
 
 class TestDownloadAndInstall:
     def test_install_success(self, monkeypatch, base):
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: None)
         zip_bytes = _make_zip({"pkg/bin/ffmpeg": b"ffmpeg-binary", "pkg/bin/ffprobe": b"ffprobe-binary"})
         monkeypatch.setattr(ffmpeg_mod, "get_download_url", lambda: "https://example.com/ffmpeg-test.zip")
         monkeypatch.setattr(
@@ -533,10 +538,12 @@ class TestDownloadAndInstall:
         assert list((base / "bin").glob(".ffmpeg-download-*")) == []
 
     def test_unsupported_platform_returns_none(self, monkeypatch):
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: None)
         monkeypatch.setattr(ffmpeg_mod, "get_download_url", lambda: None)
         assert download_and_install() is None
 
     def test_missing_ffmpeg_in_archive(self, monkeypatch, base):
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: None)
         zip_bytes = _make_zip({"readme.txt": b"hi"})
         monkeypatch.setattr(ffmpeg_mod, "get_download_url", lambda: "https://example.com/ffmpeg-test.zip")
         monkeypatch.setattr(
@@ -548,6 +555,7 @@ class TestDownloadAndInstall:
             download_and_install()
 
     def test_cancel_raises(self, monkeypatch, base):
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: None)
         monkeypatch.setattr(ffmpeg_mod, "get_download_url", lambda: "https://example.com/ffmpeg-test.zip")
         monkeypatch.setattr(
             ffmpeg_mod.urllib.request,
@@ -558,6 +566,7 @@ class TestDownloadAndInstall:
             download_and_install(cancel_check=lambda: True)
 
     def test_unexpected_error_wrapped(self, monkeypatch, base):
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: None)
         def boom():
             raise ValueError("boom")
 
@@ -628,3 +637,167 @@ class TestSmokeTest:
         binary.chmod(0o755)
         with pytest.raises(FfmpegInstallError):
             _smoke_test(tmp_path)
+
+
+class TestMirrorAssetName:
+    def test_linux_amd64(self):
+        assert mirror_asset_name("Linux", "x86_64") == "ffmpeg-linux-x86_64-static.tar.xz"
+
+    def test_linux_arm64(self):
+        assert mirror_asset_name("Linux", "aarch64") == "ffmpeg-linux-arm64-static.tar.xz"
+
+    def test_linux_armv7(self):
+        assert mirror_asset_name("Linux", "armv7l") == "ffmpeg-linux-armhf-static.tar.xz"
+
+    def test_linux_unsupported_arch(self):
+        assert mirror_asset_name("Linux", "riscv64") is None
+
+    def test_windows_x64(self):
+        assert mirror_asset_name("Windows", "AMD64") == "ffmpeg-windows-x86_64-essentials.zip"
+
+    def test_windows_unsupported_arch(self):
+        assert mirror_asset_name("Windows", "ARM64") is None
+
+    def test_macos_any_arch(self):
+        assert mirror_asset_name("Darwin", "arm64") == "ffmpeg-macos.zip"
+        assert mirror_asset_name("Darwin", "x86_64") == "ffmpeg-macos.zip"
+
+    def test_unknown_system(self):
+        assert mirror_asset_name("AmigaOS", "x86_64") is None
+
+
+class TestResolveMirror:
+    _ASSET = "ffmpeg-linux-x86_64-static.tar.xz"
+
+    def _http_fake(self, monkeypatch, assets, sha_data=None):
+        digest = "a" * 64
+        sha_data = sha_data if sha_data is not None else f"{digest}  {self._ASSET}\n".encode()
+
+        def fake(url, cancel_check=None, max_bytes=1 << 20):
+            if url == ffmpeg_mod.GITHUB_RELEASES_LATEST:
+                return json.dumps({"tag_name": "v1.2.8", "assets": assets}).encode()
+            return sha_data
+
+        monkeypatch.setattr(ffmpeg_mod, "mirror_asset_name", lambda *a, **k: self._ASSET)
+        monkeypatch.setattr(ffmpeg_mod, "_http_get", fake)
+        return digest
+
+    def test_finds_asset_with_sha(self, monkeypatch):
+        assets = [
+            {"name": self._ASSET, "browser_download_url": "https://x/ffmpeg.tar.xz"},
+            {"name": f"{self._ASSET}.sha256", "browser_download_url": "https://x/ffmpeg.tar.xz.sha256"},
+        ]
+        digest = self._http_fake(monkeypatch, assets)
+        assert _resolve_mirror() == ("https://x/ffmpeg.tar.xz", digest)
+
+    def test_missing_asset_returns_none(self, monkeypatch):
+        self._http_fake(monkeypatch, [{"name": "other.bin", "browser_download_url": "https://x/other"}])
+        assert _resolve_mirror() is None
+
+    def test_missing_sha_asset_returns_none(self, monkeypatch):
+        assets = [{"name": self._ASSET, "browser_download_url": "https://x/ffmpeg.tar.xz"}]
+        self._http_fake(monkeypatch, assets, sha_data=None)
+        monkeypatch.setattr(ffmpeg_mod, "_http_get", lambda url, cancel_check=None, max_bytes=1 << 20: json.dumps({"assets": assets}).encode() if url == ffmpeg_mod.GITHUB_RELEASES_LATEST else None)
+        assert _resolve_mirror() is None
+
+    def test_bad_sha_format_returns_none(self, monkeypatch):
+        assets = [
+            {"name": self._ASSET, "browser_download_url": "https://x/ffmpeg.tar.xz"},
+            {"name": f"{self._ASSET}.sha256", "browser_download_url": "https://x/ffmpeg.tar.xz.sha256"},
+        ]
+        self._http_fake(monkeypatch, assets, sha_data=b"not-a-hash\n")
+        assert _resolve_mirror() is None
+
+    def test_api_failure_returns_none(self, monkeypatch):
+        monkeypatch.setattr(ffmpeg_mod, "mirror_asset_name", lambda *a, **k: self._ASSET)
+        monkeypatch.setattr(ffmpeg_mod, "_http_get", lambda *a, **k: None)
+        assert _resolve_mirror() is None
+
+    def test_malformed_api_response_returns_none(self, monkeypatch):
+        monkeypatch.setattr(ffmpeg_mod, "mirror_asset_name", lambda *a, **k: self._ASSET)
+        monkeypatch.setattr(ffmpeg_mod, "_http_get", lambda *a, **k: b"not json")
+        assert _resolve_mirror() is None
+
+    def test_unsupported_platform_returns_none(self, monkeypatch):
+        monkeypatch.setattr(ffmpeg_mod, "mirror_asset_name", lambda *a, **k: None)
+        assert _resolve_mirror() is None
+
+
+class TestVerifySha256:
+    def test_matches(self, tmp_path):
+        f = tmp_path / "archive"
+        f.write_bytes(b"hello world")
+        import hashlib
+
+        expected = hashlib.sha256(b"hello world").hexdigest()
+        _verify_sha256(f, expected)
+
+    def test_mismatch_raises(self, tmp_path):
+        f = tmp_path / "archive"
+        f.write_bytes(b"hello world")
+        with pytest.raises(FfmpegInstallError):
+            _verify_sha256(f, "b" * 64)
+
+
+class TestDownloadArchive:
+    def test_mirror_preferred(self, monkeypatch, tmp_path):
+        mirror_url = "https://github.com/x/ffmpeg-linux-x86_64-static.tar.xz"
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: (mirror_url, "a" * 64))
+        monkeypatch.setattr(ffmpeg_mod, "_verify_sha256", lambda *a, **k: None)
+        downloaded = []
+        monkeypatch.setattr(
+            ffmpeg_mod,
+            "_download",
+            lambda url, dest, progress_cb, cancel_check: (downloaded.append(url), dest.write_bytes(b"mirror"), dest)[2],
+        )
+        archive = _download_archive(tmp_path, None, None)
+        assert downloaded == [mirror_url]
+        assert archive.read_bytes() == b"mirror"
+
+    def test_upstream_fallback_on_mirror_failure(self, monkeypatch, tmp_path):
+        mirror_url = "https://github.com/x/ffmpeg-linux-x86_64-static.tar.xz"
+        upstream_url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: (mirror_url, "a" * 64))
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_download_url", lambda cancel_check=None: upstream_url)
+        downloaded = []
+
+        def fake_download(url, dest, progress_cb, cancel_check):
+            if url == mirror_url:
+                raise FfmpegInstallError("mirror down")
+            downloaded.append(url)
+            dest.write_bytes(b"upstream")
+
+        monkeypatch.setattr(ffmpeg_mod, "_download", fake_download)
+        archive = _download_archive(tmp_path, None, None)
+        assert downloaded == [upstream_url]
+        assert archive.read_bytes() == b"upstream"
+
+    def test_upstream_when_no_mirror(self, monkeypatch, tmp_path):
+        upstream_url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: None)
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_download_url", lambda cancel_check=None: upstream_url)
+        downloaded = []
+        monkeypatch.setattr(
+            ffmpeg_mod,
+            "_download",
+            lambda url, dest, progress_cb, cancel_check: (downloaded.append(url), dest.write_bytes(b"x"), dest)[2],
+        )
+        archive = _download_archive(tmp_path, None, None)
+        assert downloaded == [upstream_url]
+        assert archive.read_bytes() == b"x"
+
+    def test_unsupported_returns_none(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: None)
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_download_url", lambda cancel_check=None: None)
+        assert _download_archive(tmp_path, None, None) is None
+
+    def test_cancel_during_mirror_raises(self, monkeypatch, tmp_path):
+        mirror_url = "https://github.com/x/ffmpeg-linux-x86_64-static.tar.xz"
+        monkeypatch.setattr(ffmpeg_mod, "_resolve_mirror", lambda cancel_check=None: (mirror_url, "a" * 64))
+
+        def boom(url, dest, progress_cb, cancel_check):
+            raise FfmpegInstallError("zrušeno")
+
+        monkeypatch.setattr(ffmpeg_mod, "_download", boom)
+        with pytest.raises(FfmpegInstallError):
+            _download_archive(tmp_path, None, lambda: True)

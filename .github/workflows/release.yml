@@ -18,15 +18,19 @@ jobs:
           - os: ubuntu-latest
             artifact: stahovac-linux-x86_64
             macos_app: false
+            mirror_ffmpeg: true
           - os: windows-latest
             artifact: stahovac-windows-x86_64
             macos_app: false
+            mirror_ffmpeg: true
           - os: macos-latest
             artifact: stahovac-macos-arm64
             macos_app: true
+            mirror_ffmpeg: true
           - os: macos-15-intel
             artifact: stahovac-macos-x86_64
             macos_app: true
+            mirror_ffmpeg: false
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -102,6 +106,27 @@ jobs:
           else
             cp dist/stahovac "stage/${{ matrix.artifact }}"
           fi
+      - name: Stage FFmpeg mirror asset
+        if: ${{ matrix.mirror_ffmpeg }}
+        shell: bash
+        run: |
+          uv run python - <<'PY' || { echo "FFmpeg mirror asset se nepodařilo stáhnout – release pokračuje bez něj (runtime fallback na upstream)."; exit 0; }
+          import hashlib
+          from pathlib import Path
+          from stahovac.core import ffmpeg
+          url = ffmpeg._resolve_download_url()
+          name = ffmpeg.mirror_asset_name()
+          if not url or not name:
+              print(f"Bez mirror assetu pro tuto platformu (url={url!r}, name={name!r}).")
+              raise SystemExit(0)
+          stage = Path("stage")
+          stage.mkdir(exist_ok=True)
+          dest = stage / name
+          ffmpeg._download(url, dest, None, None)
+          digest = hashlib.sha256(dest.read_bytes()).hexdigest()
+          (stage / f"{name}.sha256").write_text(f"{digest}  {name}\n", encoding="utf-8")
+          print(f"Staged {name} ({dest.stat().st_size} B) sha256 {digest}")
+          PY
       - name: Generate checksums
         shell: bash
         run: |

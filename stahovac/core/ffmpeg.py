@@ -6,6 +6,7 @@ aplikace (``get_base_dir()``). Vše je vyřešené jen standardní knihovnou
 (urllib, zipfile, tarfile + lzma), takže netřeba žádnou novou závislost.
 """
 
+import hashlib
 import json
 import os
 import platform
@@ -29,6 +30,13 @@ from stahovac.utils.ssl import make_ssl_context
 _USER_AGENT = "Mozilla/5.0 (compatible; AetherDownloader/1.0)"
 
 EVERMEET_INFO_URL = "https://evermeet.cx/ffmpeg/info/ffmpeg/release"
+
+# GitHub mirror statických buildů: release.yml nahrává oficiální archivy jako
+# release assety (spolehlivý zdroj místo johnvansickle/gyan/evermeet) a k nim
+# soubory *.sha256. Aplikace dává mirroru přednost a ověřuje SHA256; když není
+# k dispozici (starší release bez assetů), vrátí se na upstream.
+GITHUB_REPO = "Xelvra/aether-downloader"
+GITHUB_RELEASES_LATEST = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 _BINARY_NAMES = ("ffmpeg", "ffprobe")
 
@@ -238,9 +246,6 @@ def run_install(progress_cb=None, cancel_check=None) -> Path | None:
 
 
 def _download_and_install_impl(progress_cb, cancel_check) -> Path | None:
-    url = _resolve_download_url(cancel_check)
-    if not url:
-        return None
     target_dir = bin_dir()
     target_dir.mkdir(parents=True, exist_ok=True)
     tmp_dir = target_dir / f".ffmpeg-download-{uuid4().hex[:8]}"
@@ -248,8 +253,9 @@ def _download_and_install_impl(progress_cb, cancel_check) -> Path | None:
     try:
         if cancel_check is not None and cancel_check():
             raise FfmpegInstallError("Stahování FFmpeg bylo zrušeno.")
-        archive = tmp_dir / _url_archive_name(url)
-        _download(url, archive, progress_cb, cancel_check)
+        archive = _download_archive(tmp_dir, progress_cb, cancel_check)
+        if archive is None:
+            return None
         extract_dir = tmp_dir / "extract"
         _extract(archive, extract_dir)
         binaries = _find_binaries(extract_dir)
@@ -260,6 +266,95 @@ def _download_and_install_impl(progress_cb, cancel_check) -> Path | None:
         return target_dir / ("ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg")
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def _download_archive(tmp_dir: Path, progress_cb, cancel_check) -> Path | None:
+    """Stáhne archiv FFmpeg do ``tmp_dir``; vrátí cestu k souboru.
+
+    Přednost má GitHub mirror (se SHA256 ověřením), při neúspěchu se spadne
+    na oficiální upstream. Vrací ``None`` pro nepodporovanou platformu.
+    """
+    mirror = _resolve_mirror(cancel_check)
+    if mirror is not None:
+        url, expected_sha = mirror
+        archive = tmp_dir / _url_archive_name(url)
+        try:
+            _download(url, archive, progress_cb, cancel_check)
+            _verify_sha256(archive, expected_sha)
+            return archive
+        except FfmpegInstallError:
+            if cancel_check is not None and cancel_check():
+                raise
+            archive.unlink(missing_ok=True)
+    upstream_url = _resolve_download_url(cancel_check)
+    if not upstream_url:
+        return None
+    archive = tmp_dir / _url_archive_name(upstream_url)
+    _download(upstream_url, archive, progress_cb, cancel_check)
+    return archive
+
+
+def mirror_asset_name(system: str | None = None, machine: str | None = None) -> str | None:
+    """Název mirror assetu na GitHubu pro daný OS a architekturu.
+
+    Musí sedět s tím, co nahrává ``release.yml``. Nepodporovaná kombinace
+    (kterou CI nebuilduje) vrací ``None``.
+    """
+    system = system or platform.system()
+    machine = (machine or platform.machine()).lower()
+    if system == "Linux":
+        if machine in ("x86_64", "amd64"):
+            return "ffmpeg-linux-x86_64-static.tar.xz"
+        if machine in ("aarch64", "arm64"):
+            return "ffmpeg-linux-arm64-static.tar.xz"
+        if machine.startswith("armv"):
+            return "ffmpeg-linux-armhf-static.tar.xz"
+        return None
+    if system == "Windows":
+        if machine in ("x86_64", "amd64"):
+            return "ffmpeg-windows-x86_64-essentials.zip"
+        return None
+    if system == "Darwin":
+        return "ffmpeg-macos.zip"
+    return None
+
+
+def _resolve_mirror(cancel_check=None) -> tuple[str, str] | None:
+    """Najde GitHub mirror asset pro aktuální platformu.
+
+    Vrací ``(url, sha256)``, nebo ``None``, když mirror není k dispozici
+    (starší release bez assetů, nerelevantní platforma, chyba sítě/API).
+    """
+    asset_name = mirror_asset_name()
+    if not asset_name:
+        return None
+    data = _http_get(GITHUB_RELEASES_LATEST, cancel_check, max_bytes=1 << 20)
+    if not data:
+        return None
+    try:
+        release = json.loads(data)
+        assets = {a.get("name"): a.get("browser_download_url") for a in release.get("assets", []) if a}
+    except (TypeError, ValueError):
+        return None
+    url = assets.get(asset_name)
+    if not url:
+        return None
+    sha_data = _http_get(assets.get(f"{asset_name}.sha256", ""), cancel_check, max_bytes=1 << 20)
+    if not sha_data:
+        return None
+    digest = sha_data.decode("utf-8", "replace").strip().split()[0] if sha_data else ""
+    if len(digest) != 64 or not all(c in "0123456789abcdefABCDEF" for c in digest):
+        return None
+    return url, digest
+
+
+def _verify_sha256(path: Path, expected: str) -> None:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    if digest.hexdigest().lower() != expected.lower():
+        raise FfmpegInstallError("Kontrola SHA256 staženého FFmpeg se nezdařila – zkus to prosím znovu.")
 
 
 def _resolve_download_url(cancel_check=None) -> str | None:

@@ -27,7 +27,7 @@
 ## Rychlý start (3 kroky)
 
 1. Stáhni si aplikaci pro svůj počítač ze sekce [Releases](https://github.com/Xelvra/aether-downloader/releases).
-2. Spusť aplikaci, vlož odkaz na video a klikni na **Stáhnout**. Pokud aplikace potřebuje **FFmpeg** a nemá ho, nabídne ti ho ke stažení jedním tlačítkem.
+2. Spusť aplikaci, vlož odkaz na video a klikni na **Stáhnout**. Když ořez nebo MP3 vyžaduje **FFmpeg** a ten není nainstalovaný, aplikace si ho sama stáhne a nainstaluje – bez dalšího tlačítka.
 3. Hotovo — video je tvoje.
 
 Podrobný postup pro konkrétní systém najdeš níže.
@@ -42,7 +42,7 @@ Podrobný postup pro konkrétní systém najdeš níže.
 2. Soubor se nemusí rozbalovat — stačí na něj poklepat.
 3. Windows pravděpodobně zobrazí modrou obrazovku s varováním — to je normální, protože aplikace nemá placený certifikát od Microsoftu. Klikni na **Další informace** → **Přesto spustit**.
 
-> ⚠️ Před prvním stahováním ještě nainstaluj FFmpeg — viz [sekce níže](#instalace-ffmpeg-nutný-krok). Nejjednodušší je kliknout v aplikaci na tlačítko **Stáhnout FFmpeg**.
+> ⚠️ Potřebný **FFmpeg** si aplikace stáhne a nainstaluje sama, když ho poprvé využiješ (ořez nebo MP3) — viz [sekce níže](#instalace-ffmpeg-nutný-krok).
 
 ### 🐧 Linux
 
@@ -59,7 +59,7 @@ Podrobný postup pro konkrétní systém najdeš níže.
    ```
 3. Poklepej na soubor `stahovac-linux-x86_64` a aplikace se spustí.
 
-> ⚠️ Před prvním stahováním ještě nainstaluj FFmpeg — viz [sekce níže](#instalace-ffmpeg-nutný-krok).
+> ⚠️ Potřebný **FFmpeg** si aplikace stáhne a nainstaluje sama, když ho poprvé využiješ — viz [sekce níže](#instalace-ffmpeg-nutný-krok).
 
 ### 🍎 macOS
 
@@ -73,7 +73,7 @@ Podrobný postup pro konkrétní systém najdeš níže.
    - **Pravé tlačítko na `stahovac.app` → Otevřít → Otevřít**, nebo
    - **Nastavení systému → Soukromí a zabezpečení** → sjeď dolů, najdi hlášku o zablokované aplikaci a klikni na **Otevřít přesto**.
 
-> ⚠️ Před prvním stahováním ještě nainstaluj FFmpeg — viz [sekce níže](#instalace-ffmpeg-nutný-krok).
+> ⚠️ Potřebný **FFmpeg** si aplikace stáhne a nainstaluje sama, když ho poprvé využiješ — viz [sekce níže](#instalace-ffmpeg-nutný-krok).
 
 > 📂 Stažená videa a nastavení se ukládají do **`~/Library/Application Support/AetherDownloader/`** — ne do samotné aplikace. Složku si můžeš změnit v Nastavení.
 
@@ -104,9 +104,9 @@ Termux vypíše webovou adresu — otevři ji v prohlížeči telefonu. Podrobno
 
 ## Instalace FFmpeg (nutný krok)
 
-Aplikace potřebuje **FFmpeg** k ořezu videa nebo převodu na MP3. Bez něj se při spuštění zobrazí upozornění a některé funkce nebudou fungovat.
+Aplikace potřebuje **FFmpeg** k ořezu videa nebo převodu na MP3.
 
-**Nejjednodušší varianta:** klikni v aplikaci na oranžové upozornění s tlačítkem **Stáhnout FFmpeg** — aplikace ho sama stáhne, nainstaluje do složky `bin/` a použije. Žádný terminál není potřeba.
+**Nejjednodušší varianta:** nemusíš dělat nic. Když aplikaci ořez nebo MP3 poprvé využije, **FFmpeg si sama stáhne a nainstaluje** do složky `bin/` vedle aplikace – průběh uvidíš jako u běžného stahování. Stav FFmpeg a případné ruční stažení/přeinstalaci najdeš v aplikaci na kartě **Nastavení**.
 
 Pro ruční instalaci zkopíruj příkaz podle svého systému do terminálu (Windows: PowerShell, macOS/Linux: Terminál):
 
@@ -149,7 +149,7 @@ Stahování lze kdykoliv zrušit tlačítkem **Zrušit**.
 | Zrušení stahování | Jedním kliknutím stahování kdykoliv zastavíš |
 | Výběr složky | Sám si zvolíš, kam se má video uložit |
 | Kick a Twitch | Vyžaduje jednorázové nastavení cookies v Nastavení (návod v nápovědě) |
-| Automatické stažení FFmpeg | Chybí-li FFmpeg, aplikace ho jedním kliknutím sama stáhne a nainstaluje |
+| Automatické stažení FFmpeg | Chybí-li FFmpeg, aplikace ho sama stáhne a nainstaluje při prvním použití |
 | Ukládání nastavení | Vše se ukládá automaticky, není potřeba nic potvrzovat |
 
 ---
