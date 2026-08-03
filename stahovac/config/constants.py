@@ -9,6 +9,13 @@ DOWNLOADS_DIR_NAME = "downloads"
 
 QUALITY_BEST = "Nejlepší dostupná"
 
+# Sentinel pro "stahuj do konce videa" – UI text se nesmí řetězec opakovat
+# v business logice (překlep = tichá chyba).
+END_OPTION_FULL = "Do konce videa"
+END_OPTION_END = "Do určitého času"
+
+CRF_DEFAULT = 23
+
 
 class MediaFormat(str, Enum):
     MP4 = "Video + audio (MP4)"

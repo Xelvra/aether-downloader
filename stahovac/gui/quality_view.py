@@ -3,7 +3,7 @@ from typing import Any
 import flet as ft
 
 import stahovac.gui.theme as th
-from stahovac.config.constants import FORMAT_MP4, FORMATS, QUALITY_BEST
+from stahovac.config.constants import END_OPTION_END, END_OPTION_FULL, FORMAT_MP4, FORMATS, QUALITY_BEST
 from stahovac.gui.theme import (
     BREAKPOINT_COMPACT,
     BREAKPOINT_MOBILE_NAV,
@@ -71,13 +71,13 @@ class QualityView:
         self.end_option_radio = ft.RadioGroup(
             content=ft.Row(
                 [
-                    ft.Radio(value="Do konce videa", label="Do konce"),
-                    ft.Radio(value="Do určitého času", label="Do času"),
+                    ft.Radio(value=END_OPTION_FULL, label="Do konce"),
+                    ft.Radio(value=END_OPTION_END, label="Do času"),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=sz(16),
             ),
-            value="Do konce videa",
+            value=END_OPTION_FULL,
             on_change=self._handle_end_option_change,
         )
 
@@ -219,7 +219,7 @@ class QualityView:
         self._on_save()
 
     def _handle_end_option_change(self, e):
-        self.end_time_input.disabled = self.end_option_radio.value == "Do konce videa"
+        self.end_time_input.disabled = self.end_option_radio.value == END_OPTION_FULL
         self._page.update()
 
     def _toggle_time_inputs(self, e):

@@ -19,6 +19,7 @@ from stahovac.core.downloader import (
     _ffmpeg_timeout,
     _find_job_file,
     _ranged_output_name,
+    _sanitize_cmd,
     _select_hls_formats,
 )
 from stahovac.core.metadata import MetadataService
@@ -46,6 +47,29 @@ class TestFindJobFile:
 
     def test_no_match_returns_none(self, tmp_path):
         assert _find_job_file(tmp_path) is None
+
+
+class TestSanitizeCmd:
+    def test_masks_url_query_string(self):
+        cmd = ["ffmpeg", "-i", "https://x/playlist.m3u8?token=secret&expires=123", "-c", "copy", "out.mp4"]
+        out = _sanitize_cmd(cmd)
+        assert "secret" not in out
+        assert "expires" not in out
+        assert "playlist.m3u8" in out
+        assert "token" not in out
+
+    def test_masks_cookie_and_auth_headers(self):
+        headers = "Referer: https://x/\r\nCookie: sid=SECRET; other=1\r\nAuthorization: Bearer TOK"
+        out = _sanitize_cmd(["ffmpeg", "-headers", headers, "-i", "https://x/stream.m3u8", "out.mp4"])
+        assert "SECRET" not in out
+        assert "other=1" not in out
+        assert "TOK" not in out
+        assert "Cookie" in out
+        assert "Authorization" in out
+
+    def test_local_cut_cmd_unchanged(self):
+        cmd = ["ffmpeg", "-y", "-ss", "00:00:01", "-i", "/tmp/in.mp4", "-c", "copy", "/tmp/out.mp4"]
+        assert _sanitize_cmd(cmd) == " ".join(cmd)
 
 
 class TestEnsureFfmpegReady:

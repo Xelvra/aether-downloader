@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from stahovac.config.constants import FORMAT_MP4, QUALITY_BEST
+from stahovac.config.constants import CRF_DEFAULT, END_OPTION_FULL, FORMAT_MP4, QUALITY_BEST
 
 
 class DownloadState(str, Enum):
@@ -51,9 +51,9 @@ class DownloadParams:
     whole_video: bool = True
     start_time: str = "00:00"
     end_time: str = "00:00"
-    end_option: str = "Do konce videa"
+    end_option: str = END_OPTION_FULL
     re_encode: bool = False
-    crf: int = 23
+    crf: int = CRF_DEFAULT
     preset: str = "fast"
 
     @classmethod
@@ -72,9 +72,9 @@ class DownloadParams:
             whole_video=bool(data.get("whole_video", True)),
             start_time=str(data.get("start_time", "00:00")),
             end_time=str(data.get("end_time", "00:00")),
-            end_option=str(data.get("end_option", "Do konce videa")),
+            end_option=str(data.get("end_option", END_OPTION_FULL)),
             re_encode=bool(data.get("re_encode", False)),
-            crf=_int("crf", 23),
+            crf=_int("crf", CRF_DEFAULT),
             preset=str(data.get("preset", "fast")),
         )
 

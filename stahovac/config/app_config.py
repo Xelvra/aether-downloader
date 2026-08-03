@@ -11,6 +11,7 @@ from typing import Any
 from stahovac.config.constants import (
     COOKIES_NONE,
     COOKIES_SOURCES,
+    CRF_DEFAULT,
     DOWNLOADS_DIR_NAME,
     FORMAT_MP4,
     QUALITY_BEST,
@@ -19,7 +20,6 @@ from stahovac.config.constants import (
 from stahovac.utils.paths import get_base_dir
 
 SCHEMA_VERSION = 2
-CRF_DEFAULT = 23
 CRF_MIN = 0
 CRF_MAX = 51
 PRESETS = ("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow")

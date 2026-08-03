@@ -15,7 +15,7 @@ from typing import Any
 
 import yt_dlp
 
-from stahovac.config.constants import FORMAT_MP4, QUALITY_BEST, MediaFormat
+from stahovac.config.constants import END_OPTION_FULL, FORMAT_MP4, QUALITY_BEST, MediaFormat
 from stahovac.core.ffmpeg import find_ffmpeg, wait_until_ready
 from stahovac.core.metadata import MetadataService, YtdlLogger
 from stahovac.core.validator import pad_time, time_to_seconds
@@ -196,10 +196,8 @@ def _build_ydl_opts(
 
 
 def _estimate_cut_duration(start_time: str, end_time: str, end_option: str | None) -> int | None:
-    if not end_option or end_option == "Do konce videa":
+    if not end_option or end_option == END_OPTION_FULL:
         return None
-    from stahovac.core.validator import time_to_seconds
-
     return max(0, time_to_seconds(end_time) - time_to_seconds(start_time))
 
 
@@ -219,6 +217,23 @@ def _fmt_timestamp(value: str) -> str:
     return f"{parts[0]}s"
 
 
+_SENSITIVE_HEADER = re.compile(r"(?i)(cookie|authorization|x-api-key|x-auth-token)\s*:\s*[^\r\n]*")
+
+
+def _sanitize_cmd(cmd: list[str]) -> str:
+    """Sestaví příkaz pro log bez citlivých údajů.
+
+    Z URL argumentů odstraňuje query string (podepsané HLS tokeny, expirace)
+    a v hlavičkách maskuje hodnoty cookie/autorizace, aby se nedostaly do logu.
+    """
+    parts: list[str] = []
+    for arg in cmd:
+        if "://" in arg:
+            arg = re.sub(r"(https?://[^?]+)\?[^\s]*", r"\1?…(zamlčeno)", arg)
+        parts.append(_SENSITIVE_HEADER.sub(r"\1…(zamlčeno)", arg))
+    return " ".join(parts)
+
+
 def _build_ffmpeg_cmd(
     input_path: Path,
     start_time: str,
@@ -229,12 +244,10 @@ def _build_ffmpeg_cmd(
     preset: str = "fast",
     ffmpeg_bin: str = "ffmpeg",
 ) -> tuple[list[str], Path]:
-    from stahovac.core.validator import pad_time
-
     start_padded = pad_time(start_time)
     start_safe = _fmt_timestamp(start_padded)
 
-    if end_option == "Do konce videa":
+    if end_option == END_OPTION_FULL:
         to_arg: str | None = None
         section_part = f" [{start_safe}-inf]"
     else:
@@ -323,7 +336,7 @@ def _ranged_output_name(title: str, quality: str, start_time: str, end_time: str
     if quality != QUALITY_BEST:
         stem += f" [{quality}]"
     start_safe = _fmt_timestamp(pad_time(start_time))
-    if end_option == "Do konce videa":
+    if end_option == END_OPTION_FULL:
         stem += f" [{start_safe}-inf]"
     else:
         end_safe = _fmt_timestamp(pad_time(end_time))
@@ -348,7 +361,7 @@ def _build_ranged_cmd(
     cmd += _hls_input_args(video_fmt)
     if audio_fmt is not None:
         cmd += _hls_input_args(audio_fmt)
-    if end_option != "Do konce videa":
+    if end_option != END_OPTION_FULL:
         duration = max(0, time_to_seconds(end_time) - time_to_seconds(start_time))
         cmd += ["-t", str(duration)]
     if re_encode:
@@ -707,7 +720,7 @@ class Downloader:
             preset=preset,
             ffmpeg_bin=str(ffmpeg_bin),
         )
-        self.on_log(f"Ořezávám: {' '.join(cmd)}")
+        self.on_log(f"Ořezávám: {_sanitize_cmd(cmd)}")
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
@@ -775,7 +788,7 @@ class Downloader:
             temp_path,
             str(ffmpeg_bin),
         )
-        self.on_log(f"Stahuji jen úsek (HLS): {' '.join(cmd)}")
+        self.on_log(f"Stahuji jen úsek (HLS): {_sanitize_cmd(cmd)}")
         self.on_status(job_id, "Stahuji jen vybraný úsek (HLS)…", "blue")
         proc = subprocess.Popen(
             cmd,

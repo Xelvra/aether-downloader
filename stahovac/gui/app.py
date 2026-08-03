@@ -702,11 +702,12 @@ class GuiApp:
                 self.on_status(error, COLOR_WARN)
                 self._force_unlock_ui()
                 return
-            crf_error = validate_crf(quality_params["crf"])
-            if crf_error:
-                self.on_status(crf_error, COLOR_WARN)
-                self._force_unlock_ui()
-                return
+            if quality_params["re_encode"]:
+                crf_error = validate_crf(quality_params["crf"])
+                if crf_error:
+                    self.on_status(crf_error, COLOR_WARN)
+                    self._force_unlock_ui()
+                    return
         params = DownloadParams(
             url=url,
             quality=quality_params["quality"],

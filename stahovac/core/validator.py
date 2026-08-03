@@ -1,6 +1,8 @@
 import re
 from urllib.parse import urlparse
 
+from stahovac.config.constants import END_OPTION_FULL
+
 RE_PROGRESS = re.compile(
     r"\[download\]\s+(?P<percent>\d+\.?\d*)%\s+of\s+.*?\s+at\s+(?P<speed>.+?)\s+ETA\s+(?P<eta>\S+)"
 )
@@ -33,7 +35,7 @@ def time_to_seconds(value: str) -> int:
 def validate_time_range(start_raw: str, end_raw: str, end_option: str) -> str | None:
     if not RE_TIME_FORMAT.match(normalize_time(start_raw)):
         return "⚠️ Neplatný formát času „Začátek ořezu“ – použij SS, MM:SS nebo HH:MM:SS (např. 00:10:00)."
-    if end_option != "Do konce videa":
+    if end_option != END_OPTION_FULL:
         if not RE_TIME_FORMAT.match(normalize_time(end_raw)):
             return "⚠️ Neplatný formát času „Konec ořezu“ – použij SS, MM:SS nebo HH:MM:SS (např. 00:20:00)."
         start_sec = time_to_seconds(start_raw)
