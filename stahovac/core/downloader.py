@@ -16,7 +16,7 @@ from typing import Any
 import yt_dlp
 
 from stahovac.config.constants import FORMAT_MP4, QUALITY_BEST, MediaFormat
-from stahovac.core.ffmpeg import find_ffmpeg
+from stahovac.core.ffmpeg import find_ffmpeg, wait_until_ready
 from stahovac.core.metadata import MetadataService, YtdlLogger
 from stahovac.core.validator import pad_time, time_to_seconds
 from stahovac.models import DownloadParams, DownloadState
@@ -102,6 +102,19 @@ def _unique_dest(dest_dir: Path, name: str) -> Path:
         if not candidate.exists():
             return candidate
     return dest
+
+
+def _ensure_ffmpeg_ready(params: DownloadParams) -> None:
+    """Počká, až bude FFmpeg k dispozici, když ho úloha vyžaduje.
+
+    GUI spouští instalaci FFmpeg na pozadí (auto-install). Tady jen počkáme
+    na její dokončení, aby yt-dlp (merge formátů, MP3, titulky) i ořez měly
+    FFmpeg k dispozici; hlavní vlákno UI se nikdy neblokuje. Když se žádná
+    instalace nespouští, vrátí se okamžitě a zachová se stávající chování.
+    """
+    needs_ffmpeg = not params.whole_video or params.format_choice != FORMAT_MP4
+    if needs_ffmpeg:
+        wait_until_ready()
 
 
 def _build_ydl_opts(
@@ -453,6 +466,7 @@ class Downloader:
             opts["_cancel_check"] = self._cancel_event.is_set
 
             self._set_state(DownloadState.DOWNLOADING)
+            _ensure_ffmpeg_ready(params)
             ranged_path: Path | None = None
             ok = False
             if not params.whole_video and params.format_choice == FORMAT_MP4 and _can_ranged_hls(url):
@@ -481,6 +495,7 @@ class Downloader:
                         return
                     elif found and not params.whole_video and not is_subs_dl:
                         self._set_state(DownloadState.PROCESSING)
+                        _ensure_ffmpeg_ready(params)
                         self.on_status(job_id, "Ořezávám video…", "orange")
                         trimmed = self._cut_with_ffmpeg(
                             found,

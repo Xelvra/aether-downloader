@@ -4,7 +4,9 @@
 
 Aplikace **Aether Downloader** ke své funkci (ořez videa, převod na MP3) využívá nástroj **FFmpeg** (https://ffmpeg.org/).
 
-**Tato aplikace FFmpeg nedistribuuje.** Aplikace ho buď použije, pokud je už nainstalovaný v systému (systémová instalace uživatele), nebo na požádání stáhne **oficiální statický build** přímo od jeho autorů:
+**macOS:** aplikace **distribuuje** FFmpeg jako součást release balíčku – jedná se o **nezměněnou binárku oficiálního statického buildu** přímo od jeho autorů (žádný zásah do zdrojového kódu, žádné statické linkování do vlastního programu aplikace; FFmpeg se spouští jako samostatný podproces).
+
+**Windows a Linux:** aplikace FFmpeg nedistribuuje. Buď ho použije, pokud je už nainstalovaný v systému (systémová instalace uživatele), nebo na požádání stáhne **oficiální statický build** přímo od jeho autorů. Tlačítko „Stáhnout FFmpeg“ v Nastavení zůstává jako fallback pro sestavení ze zdrojového kódu.
 
 | Platforma | Zdroj |
 |-----------|-------|

@@ -144,6 +144,14 @@ def _run_checks(url: str | None, output: str | None) -> int:
     for host in _SMOKE_HOSTS_BEST_EFFORT:
         _check_host(host, fatal=False)
 
+    try:
+        from stahovac.core.ffmpeg import find_ffmpeg
+
+        ffmpeg_path = find_ffmpeg()
+        record("ffmpeg", ffmpeg_path is not None, str(ffmpeg_path) if ffmpeg_path else "", fatal=False)
+    except Exception as exc:  # pragma: no cover
+        record("ffmpeg", False, f"{type(exc).__name__}: {exc}", fatal=False)
+
     if url:
         try:
             import yt_dlp

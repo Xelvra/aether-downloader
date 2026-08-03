@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -46,22 +47,75 @@ class FfmpegInstallError(Exception):
     """Chyba při stahování nebo instalaci FFmpeg."""
 
 
+# Koordinace instalace na pozadí: worker, který stahuje FFmpeg (spouští ho
+# GUI), dá přes _install_event vědět, že skončil. Ostatní vlákna (worker
+# stahování videa) přes wait_until_ready() počkají, až bude FFmpeg k dispozici.
+_install_lock = threading.Lock()
+_install_event = threading.Event()
+_install_in_progress = False
+
+
 def bin_dir() -> Path:
     """Adresář vedle aplikace, kam se ukládají stažené binárky."""
     return get_base_dir() / "bin"
 
 
-def find_ffmpeg() -> Path | None:
-    """Najde spustitelný FFmpeg – nejdřív v systému (PATH), pak v ``bin/``.
+def install_in_progress() -> bool:
+    """True, když právě běží instalace FFmpeg (v jiném vlákně)."""
+    return _install_in_progress
 
-    Na macOS se navíc kontrolují známá umístění Homebrew, protože .app
-    spuštěný z Finderu nemá Homebrew adresáře v PATH.
+
+def wait_until_ready(timeout: float = 60 * 20) -> bool:
+    """Počká, až bude FFmpeg k dispozici.
+
+    Když instalace probíhá na pozadí, počká na její dokončení (úspěch i
+    selhání). Když se nic neinstaluje, vrátí okamžitě. Vrací ``True``, jakmile
+    ``find_ffmpeg()`` najde binárku.
+    """
+    if find_ffmpeg() is not None:
+        return True
+    if not install_in_progress():
+        return False
+    _install_event.wait(timeout)
+    return find_ffmpeg() is not None
+
+
+def _bundled_ffmpeg_path() -> Path | None:
+    """FFmpeg přibalený do binárky PyInstalleru (``sys._MEIPASS``).
+
+    U onefile je ``_MEIPASS`` dočasný extrakční adresář, u onedir (macOS .app)
+    finální adresář s binárkou – obojí pokrývá přibalenou verzi. Na macOS je
+    tato verze garantovaně otestovaná s daným releasem, proto má přednost před
+    ``bin/`` (ručně stažené) i Homebrew.
+    """
+    if not getattr(sys, "frozen", False):
+        return None
+    base = getattr(sys, "_MEIPASS", None)
+    if not base:
+        return None
+    name = "ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg"
+    candidate = Path(base) / name
+    if candidate.is_file() and (platform.system() == "Windows" or os.access(candidate, os.X_OK)):
+        return candidate.resolve()
+    return None
+
+
+def find_ffmpeg() -> Path | None:
+    """Najde spustitelný FFmpeg.
+
+    Pořadí kontrol: systémový ``PATH`` → přibalená verze (``_MEIPASS``) →
+    ``bin/`` vedle aplikace → známá umístění Homebrew (macOS). PATH má
+    přednost, protože respektuje explicitní volbu uživatele; přibalená verze
+    před ``bin/``, protože je garantovaně otestovaná s tímto releasem.
 
     Vrací absolutní cestu k binárce, nebo ``None``, pokud není k dispozici.
     """
     system_ffmpeg = shutil.which("ffmpeg")
     if system_ffmpeg:
         return Path(system_ffmpeg).resolve()
+    bundled = _bundled_ffmpeg_path()
+    if bundled is not None:
+        return bundled
     local = bin_dir() / ("ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg")
     if local.is_file() and (platform.system() == "Windows" or os.access(local, os.X_OK)):
         return local.resolve()
@@ -136,14 +190,51 @@ def download_and_install(progress_cb=None, cancel_check=None) -> Path | None:
     - ``progress_cb(percent: float, speed: str, eta: str)`` – průběh stahování
     - ``cancel_check() -> bool`` – vrací ``True``, když má být stahování zrušeno
 
-    Vrací ``None`` pro nepodporovanou platformu/architekturu.
+    Vrací ``None`` pro nepodporovanou platformu/architekturu. Volání je
+    bezpečné z více vláken: když už instalace běží, další volání počká na
+    výsledek a vrátí stav po dokončení.
     """
+    if not claim_install():
+        _install_event.wait()
+        return find_ffmpeg()
+    return run_install(progress_cb, cancel_check)
+
+
+def claim_install() -> bool:
+    """Synchronně si vyžádá instalaci FFmpeg.
+
+    Vrací ``True``, když volání instalaci začíná (má pokračovat přes
+    ``run_install``), jinak ``False``, protože instalace už běží nebo je
+    vyžádaná. GUI to volá před spuštěním background vlákna, takže
+    ``wait_until_ready()`` (z workeru stahování videa) hned ví, že instalace
+    přijde, a počká na ni bez race.
+    """
+    global _install_in_progress
+    with _install_lock:
+        if _install_in_progress:
+            return False
+        _install_in_progress = True
+        _install_event.clear()
+        return True
+
+
+def run_install(progress_cb=None, cancel_check=None) -> Path | None:
+    """Provede samotné stahování a instalaci FFmpeg do ``bin/``.
+
+    Předpokládá, že si instalaci vyžádal volající (``claim_install()`` vracel
+    ``True``) – obvykle ho volá background vlákno spuštěné GUI.
+    """
+    global _install_in_progress
     try:
         return _download_and_install_impl(progress_cb, cancel_check)
     except FfmpegInstallError:
         raise
     except Exception as ex:
         raise FfmpegInstallError(f"Instalace FFmpeg selhala: {ex}") from ex
+    finally:
+        _install_event.set()
+        with _install_lock:
+            _install_in_progress = False
 
 
 def _download_and_install_impl(progress_cb, cancel_check) -> Path | None:

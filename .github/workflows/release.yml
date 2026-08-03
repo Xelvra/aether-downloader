@@ -46,6 +46,12 @@ jobs:
       - name: Install system deps (Windows)
         if: runner.os == 'Windows'
         run: choco install ffmpeg -y
+      - name: Fetch FFmpeg for bundling (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          uv run python -c "from stahovac.core.ffmpeg import download_and_install; download_and_install()"
+          test -x bin/ffmpeg || { echo "FFmpeg se nestáhl, build se ruší."; exit 1; }
       - name: Build binary
         shell: bash
         run: |
@@ -63,12 +69,27 @@ jobs:
             $bin = "dist/stahovac.exe"
           } elseif ($env:RUNNER_OS -eq "macOS") {
             $bin = "dist/stahovac.app/Contents/MacOS/stahovac"
+            # Bez FFmpeg v PATH: ověří se přibalená binárka (sys._MEIPASS)
+            # místo systémové instalace přes Homebrew.
+            $env:PATH = "/usr/bin:/bin"
           } else {
             $bin = "dist/stahovac"
           }
           & $bin --check --check-url $env:SMOKE_URL --check-output "$PWD/check.json"
           $rc = $LASTEXITCODE
           if (Test-Path "$PWD/check.json") { Get-Content "$PWD/check.json" | Write-Output }
+          if ($env:RUNNER_OS -eq "macOS") {
+            $check = Get-Content "$PWD/check.json" -Raw | ConvertFrom-Json
+            $ff = $check.results | Where-Object { $_.name -eq "ffmpeg" }
+            if (-not $ff -or -not $ff.ok) {
+              Write-Error "Přibalený FFmpeg nebyl nalezen (ffmpeg check selhal)."
+              exit 1
+            }
+            if ($ff.detail -notmatch "Contents/MacOS/_internal") {
+              Write-Error "FFmpeg nalezen mimo bundle: $($ff.detail)"
+              exit 1
+            }
+          }
           exit $rc
       - name: Stage binary
         shell: bash

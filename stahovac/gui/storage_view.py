@@ -82,6 +82,16 @@ class StorageView:
             visible=(state.config.get("cookies_source") == COOKIES_FILE_OPTION),
         )
 
+        self.ffmpeg_status_text = ft.Text("", size=sz(13), expand=True)
+        self.ffmpeg_install_btn = ft.Button(
+            content="Stáhnout FFmpeg",
+            icon=ft.Icons.DOWNLOAD,
+            on_click=lambda e: self._on_ffmpeg_install() if self._on_ffmpeg_install else None,
+        )
+        self.ffmpeg_progress = ft.ProgressBar(visible=False, height=sz(4), color=COLOR_ACCENT, bgcolor=COLOR_SURFACE)
+        self._ffmpeg_installing = False
+        self.refresh_ffmpeg_status()
+
         self._initialized = True
 
     def _build_output_row(self, mobile: bool) -> ft.Control:
@@ -151,11 +161,6 @@ class StorageView:
                                 spacing=sz(8),
                             ),
                             self.cookies_file_row,
-                            ft.Text(
-                                "Poznámka: cookies se aplikují na Kick a Twitch. Na YouTube se záměrně nepoužívají.",
-                                size=sz(11),
-                                color=COLOR_TEXT_SECONDARY,
-                            ),
                             ft.Divider(height=1, color=COLOR_SURFACE),
                             ft.Text(
                                 "FFmpeg:",
@@ -175,24 +180,45 @@ class StorageView:
             expand=True,
         )
 
-    def _build_ffmpeg_row(self):
+    def refresh_ffmpeg_status(self):
+        """Aktualizuje stav FFmpeg v Nastavení (nainstalováno + verze)."""
         version = get_ffmpeg_version()
         installed = version is not None
-        label = "Přeinstalovat FFmpeg" if installed else "Stáhnout FFmpeg"
-        status = f"FFmpeg: nainstalováno ✓ (v{version})" if installed else "FFmpeg: nenainstalováno"
-        color = COLOR_SUCCESS if installed else COLOR_WARN
-        button = ft.Button(
-            label,
-            icon=ft.Icons.DOWNLOAD,
-            on_click=lambda e: self._on_ffmpeg_install() if self._on_ffmpeg_install else None,
-        )
-        return ft.Row(
+        if installed:
+            self.ffmpeg_status_text.value = f"FFmpeg: nainstalováno ✓ (v{version})"
+            self.ffmpeg_status_text.color = COLOR_SUCCESS
+        else:
+            self.ffmpeg_status_text.value = "FFmpeg: nenainstalováno"
+            self.ffmpeg_status_text.color = COLOR_WARN
+        self.ffmpeg_install_btn.content = "Přeinstalovat FFmpeg" if installed else "Stáhnout FFmpeg"
+        if not self._ffmpeg_installing:
+            self.ffmpeg_install_btn.visible = True
+            self.ffmpeg_progress.visible = False
+
+    def set_ffmpeg_installing(self, installing: bool, text: str = "", percent: float | None = None):
+        """Průběh instalace FFmpeg přímo v sekci Nastavení."""
+        self._ffmpeg_installing = installing
+        if installing:
+            self.ffmpeg_install_btn.visible = False
+            self.ffmpeg_progress.visible = True
+            self.ffmpeg_progress.value = percent / 100.0 if percent is not None else None
+            self.ffmpeg_status_text.value = text or "Instaluji FFmpeg…"
+            self.ffmpeg_status_text.color = COLOR_WARN
+        else:
+            self.ffmpeg_progress.visible = False
+            self.refresh_ffmpeg_status()
+
+    def _build_ffmpeg_row(self):
+        return ft.Column(
             [
-                ft.Text(status, size=sz(13), color=color, expand=True),
-                button,
+                ft.Row(
+                    [self.ffmpeg_status_text, self.ffmpeg_install_btn],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    spacing=sz(12),
+                ),
+                self.ffmpeg_progress,
             ],
-            alignment=ft.MainAxisAlignment.CENTER,
-            spacing=sz(12),
+            spacing=sz(6),
         )
 
     def _on_picker_result(self, path: str | None):

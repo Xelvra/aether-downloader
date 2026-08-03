@@ -14,6 +14,7 @@ from stahovac.core.downloader import (
     _build_ranged_cmd,
     _build_ydl_opts,
     _can_ranged_hls,
+    _ensure_ffmpeg_ready,
     _estimate_cut_duration,
     _ffmpeg_timeout,
     _find_job_file,
@@ -45,6 +46,26 @@ class TestFindJobFile:
 
     def test_no_match_returns_none(self, tmp_path):
         assert _find_job_file(tmp_path) is None
+
+
+class TestEnsureFfmpegReady:
+    def test_waits_when_trim_needed(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(dl_mod, "wait_until_ready", lambda: calls.append("wait"))
+        _ensure_ffmpeg_ready(_params(whole_video=False))
+        assert calls == ["wait"]
+
+    def test_waits_when_mp3(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(dl_mod, "wait_until_ready", lambda: calls.append("wait"))
+        _ensure_ffmpeg_ready(_params(format_choice=MediaFormat.MP3.value))
+        assert calls == ["wait"]
+
+    def test_skips_whole_video_mp4(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(dl_mod, "wait_until_ready", lambda: calls.append("wait"))
+        _ensure_ffmpeg_ready(_params())
+        assert calls == []
 
 
 class TestBuildYdlOpts:

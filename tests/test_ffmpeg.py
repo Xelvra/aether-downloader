@@ -1,6 +1,8 @@
 import io
 import json
 import tarfile
+import threading
+import time
 import zipfile
 from pathlib import Path
 
@@ -22,6 +24,8 @@ from stahovac.core.ffmpeg import (
     find_ffmpeg,
     get_download_url,
     get_ffmpeg_version,
+    install_in_progress,
+    wait_until_ready,
 )
 from stahovac.utils.paths import set_base_dir
 
@@ -160,6 +164,161 @@ class TestFindFfmpeg:
         binary = base / "bin" / "ffmpeg.exe"
         binary.write_text("x")
         assert find_ffmpeg() == binary.resolve()
+
+
+class TestBundledFfmpeg:
+    def test_meipass_fallback(self, monkeypatch, base):
+        monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
+        meipass = base / "meipass"
+        meipass.mkdir()
+        binary = meipass / "ffmpeg"
+        binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o755)
+        monkeypatch.setattr(ffmpeg_mod.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(ffmpeg_mod.sys, "_MEIPASS", str(meipass), raising=False)
+        assert find_ffmpeg() == binary.resolve()
+
+    def test_path_wins_over_meipass(self, monkeypatch, base):
+        monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: "/usr/bin/ffmpeg")
+        meipass = base / "meipass"
+        meipass.mkdir()
+        bundled = meipass / "ffmpeg"
+        bundled.write_text("#!/bin/sh\n")
+        bundled.chmod(0o755)
+        monkeypatch.setattr(ffmpeg_mod.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(ffmpeg_mod.sys, "_MEIPASS", str(meipass), raising=False)
+        assert find_ffmpeg() == Path("/usr/bin/ffmpeg").resolve()
+
+    def test_meipass_wins_over_bin_dir(self, monkeypatch, base):
+        monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
+        meipass = base / "meipass"
+        meipass.mkdir()
+        bundled = meipass / "ffmpeg"
+        bundled.write_text("#!/bin/sh\n")
+        bundled.chmod(0o755)
+        (base / "bin").mkdir()
+        local = base / "bin" / "ffmpeg"
+        local.write_text("#!/bin/sh\n")
+        local.chmod(0o755)
+        monkeypatch.setattr(ffmpeg_mod.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(ffmpeg_mod.sys, "_MEIPASS", str(meipass), raising=False)
+        assert find_ffmpeg() == bundled.resolve()
+
+    def test_meipass_ignored_when_not_executable(self, monkeypatch, base):
+        monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
+        monkeypatch.setattr(ffmpeg_mod, "_MACOS_HOMEBREW_PATHS", ())
+        monkeypatch.setattr(ffmpeg_mod.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(ffmpeg_mod.sys, "_MEIPASS", str(base), raising=False)
+        (base / "ffmpeg").write_text("x")
+        assert find_ffmpeg() is None
+
+
+class TestInstallCoordination:
+    def test_install_flag_toggles(self, monkeypatch, base):
+        observed = []
+
+        def impl(progress_cb=None, cancel_check=None):
+            observed.append(install_in_progress())
+            return base / "bin" / "ffmpeg"
+
+        monkeypatch.setattr(ffmpeg_mod, "_download_and_install_impl", impl)
+        result = download_and_install()
+        assert result == base / "bin" / "ffmpeg"
+        assert observed == [True]
+        assert install_in_progress() is False
+
+    def test_second_call_waits_for_first(self, monkeypatch, base):
+        started = threading.Event()
+        release = threading.Event()
+        results = []
+
+        def impl(progress_cb=None, cancel_check=None):
+            started.set()
+            release.wait(10)
+            return base / "bin" / "ffmpeg"
+
+        monkeypatch.setattr(ffmpeg_mod, "_download_and_install_impl", impl)
+        monkeypatch.setattr(ffmpeg_mod, "find_ffmpeg", lambda: base / "bin" / "ffmpeg")
+
+        def run():
+            results.append(download_and_install())
+
+        t = threading.Thread(target=run, daemon=True)
+        t.start()
+        assert started.wait(10)
+        release.set()
+        second = download_and_install()
+        t.join(10)
+        assert second == base / "bin" / "ffmpeg"
+        assert results == [base / "bin" / "ffmpeg"]
+
+    def test_install_event_set_on_failure(self, monkeypatch, base):
+        def impl(progress_cb=None, cancel_check=None):
+            raise FfmpegInstallError("boom")
+
+        monkeypatch.setattr(ffmpeg_mod, "_download_and_install_impl", impl)
+        with pytest.raises(FfmpegInstallError):
+            download_and_install()
+        assert install_in_progress() is False
+
+
+class TestClaimInstall:
+    def test_claim_has_single_owner(self):
+        try:
+            assert ffmpeg_mod.claim_install() is True
+            assert ffmpeg_mod.claim_install() is False
+            assert ffmpeg_mod.install_in_progress() is True
+        finally:
+            ffmpeg_mod._install_event.set()
+            with ffmpeg_mod._install_lock:
+                ffmpeg_mod._install_in_progress = False
+
+    def test_run_install_releases_claim(self, monkeypatch, base):
+        monkeypatch.setattr(ffmpeg_mod, "_download_and_install_impl", lambda *a, **k: base / "bin" / "ffmpeg")
+        assert ffmpeg_mod.claim_install() is True
+        result = ffmpeg_mod.run_install()
+        assert result == base / "bin" / "ffmpeg"
+        assert ffmpeg_mod.install_in_progress() is False
+        assert ffmpeg_mod._install_event.is_set()
+
+
+class TestWaitUntilReady:
+    def test_ready_returns_immediately(self, monkeypatch):
+        monkeypatch.setattr(ffmpeg_mod, "find_ffmpeg", lambda: Path("/usr/bin/ffmpeg"))
+        assert wait_until_ready() is True
+
+    def test_not_installing_returns_false(self, monkeypatch):
+        monkeypatch.setattr(ffmpeg_mod, "find_ffmpeg", lambda: None)
+        monkeypatch.setattr(ffmpeg_mod, "_install_in_progress", False)
+        assert wait_until_ready(timeout=0.1) is False
+
+    def test_waits_for_ongoing_install(self, monkeypatch):
+        state = {"ready": False}
+        event = threading.Event()
+        monkeypatch.setattr(ffmpeg_mod, "_install_in_progress", True)
+        monkeypatch.setattr(ffmpeg_mod, "_install_event", event)
+        monkeypatch.setattr(ffmpeg_mod, "find_ffmpeg", lambda: Path("/usr/bin/ffmpeg") if state["ready"] else None)
+
+        def finish():
+            time.sleep(0.05)
+            state["ready"] = True
+            event.set()
+
+        threading.Thread(target=finish, daemon=True).start()
+        assert wait_until_ready(timeout=10) is True
+
+    def test_waits_but_still_missing(self, monkeypatch):
+        event = threading.Event()
+        monkeypatch.setattr(ffmpeg_mod, "_install_in_progress", True)
+        monkeypatch.setattr(ffmpeg_mod, "_install_event", event)
+        monkeypatch.setattr(ffmpeg_mod, "find_ffmpeg", lambda: None)
+
+        def finish():
+            time.sleep(0.05)
+            event.set()
+
+        threading.Thread(target=finish, daemon=True).start()
+        assert wait_until_ready(timeout=10) is False
 
 
 class TestIsReady:

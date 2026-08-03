@@ -133,10 +133,9 @@ def build_help_content(dismiss_callback) -> ft.Container:
                 _section(
                     "Instalace FFmpeg",
                     "FFmpeg je malý program, který aplikace potřebuje pro ořez videa a převod na MP3.",
-                    "Pokud není nainstalovaný, uvidíš u spodního okraje oranžové upozornění "
-                    "s tlačítkem „Stáhnout FFmpeg“.",
-                    "Nejjednodušší je na to tlačítko kliknout – aplikace FFmpeg stáhne "
-                    "a nainstaluje sama, nic dalšího nastavovat nemusíš.",
+                    "Když ho poprvé využiješ (ořez nebo MP3), aplikace si ho stáhne a nainstaluje sama – "
+                    "průběh uvidíš jako u běžného stahování. Nic dalšího nastavovat nemusíš.",
+                    "Stav FFmpeg a případné ruční stažení nebo přeinstalaci najdeš na kartě Nastavení.",
                     "Chceš-li ho nainstalovat raději ručně, použij jeden z příkazů podle svého systému:",
                 ),
                 _code_block(
@@ -161,9 +160,10 @@ def build_help_content(dismiss_callback) -> ft.Container:
                 _section(
                     "Licence FFmpeg",
                     "FFmpeg je otevřený software pod licencí LGPL/GPL.",
-                    "Aplikace sama FFmpeg nedistribuuje – když ho stáhneš tlačítkem, "
-                    "stahuješ oficiální build přímo od jeho tvůrců. "
-                    "Podrobnosti: https://ffmpeg.org/legal.html",
+                    "Na macOS je FFmpeg součástí aplikace – nezměněný oficiální build, "
+                    "který se spouští jako samostatný program. "
+                    "Na Windows a Linuxu ho aplikace stahuje na vyžádání, vždy oficiální build "
+                    "přímo od tvůrců. Podrobnosti: https://ffmpeg.org/legal.html",
                 ),
                 _section("Časté problémy"),
                 _qa(

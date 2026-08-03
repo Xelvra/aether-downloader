@@ -75,7 +75,6 @@ class GuiApp:
         self._build_nav()
         self._build_content_area()
         self._build_layout()
-        self._ensure_system_deps()
         self._page.update()
 
     def _run_ui_thread(self, handler, *args) -> None:
@@ -258,7 +257,7 @@ class GuiApp:
             page=self._page,
             state=self._manager.state,
             on_save_callback=self._on_save_settings,
-            on_ffmpeg_install=self._on_download_ffmpeg,
+            on_ffmpeg_install=self._start_ffmpeg_install,
         )
         self.logs_view = LogsView(self._page)
 
@@ -353,40 +352,7 @@ class GuiApp:
             text_align=ft.TextAlign.CENTER,
         )
         self._ffmpeg_installing = False
-        self._ffmpeg_cancel = threading.Event()
         self._last_ffmpeg_progress = 0.0
-        self._ffmpeg_text = ft.Text("", size=sz(12), color=COLOR_WARN, text_align=ft.TextAlign.CENTER)
-        self._ffmpeg_progress = ft.ProgressBar(visible=False, height=sz(4), color=COLOR_ACCENT, bgcolor=COLOR_SURFACE)
-        self._ffmpeg_btn = ft.Button(
-            "Stáhnout FFmpeg (cca 80 MB)",
-            icon=ft.Icons.DOWNLOAD,
-            on_click=self._on_download_ffmpeg,
-        )
-        self._ffmpeg_cancel_btn = ft.Button(
-            "Zrušit",
-            on_click=self._on_cancel_ffmpeg_download,
-            visible=False,
-        )
-        self._ffmpeg_banner = ft.Container(
-            content=ft.Column(
-                [
-                    self._ffmpeg_text,
-                    self._ffmpeg_progress,
-                    ft.Row(
-                        [self._ffmpeg_btn, self._ffmpeg_cancel_btn],
-                        alignment=ft.MainAxisAlignment.CENTER,
-                        spacing=sz(8),
-                    ),
-                ],
-                spacing=sz(4),
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            visible=False,
-            bgcolor=COLOR_SURFACE,
-            border_radius=sz(8),
-            padding=sz(8),
-            margin=ft.Margin(0, sz(4), 0, 0),
-        )
 
     # --- Navigation ---
 
@@ -494,7 +460,7 @@ class GuiApp:
                         ft.Divider(height=1, color=COLOR_SURFACE),
                         ft.Container(
                             content=ft.Column(
-                                [self._progress_bar, self._status_text, self._ffmpeg_banner],
+                                [self._progress_bar, self._status_text],
                                 spacing=sz(4),
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                             ),
@@ -509,35 +475,36 @@ class GuiApp:
             )
         )
 
-    def _ensure_system_deps(self):
-        if ffmpeg.find_ffmpeg() is None:
-            self._ffmpeg_text.value = "⚠️ FFmpeg není nainstalován – bez něj nepůjde ořez videa ani převod na MP3."
-            self._ffmpeg_banner.visible = True
-            self._safe_page_update()
+    def _start_ffmpeg_install(self, auto: bool = False):
+        """Spustí instalaci FFmpeg na pozadí.
 
-    def _on_download_ffmpeg(self, e=None):
+        ``auto=True`` – volá se automaticky při prvním ořezu/MP3 (bez zásahu
+        uživatele). Průběh běží ve společném progress pruhu jako stahování.
+        """
         if self._ffmpeg_installing:
             return
+        if not ffmpeg.claim_install():
+            self._ffmpeg_installing = True
+            return
         self._ffmpeg_installing = True
-        self._ffmpeg_cancel = threading.Event()
-        self._ffmpeg_text.value = "Stahuji a instaluji FFmpeg…"
-        self._ffmpeg_btn.visible = False
-        self._ffmpeg_cancel_btn.visible = True
-        self._ffmpeg_progress.visible = True
-        self._ffmpeg_progress.value = None
-        self._ffmpeg_banner.visible = True
-        self._safe_page_update()
+        self._last_ffmpeg_progress = 0.0
+        self._set_ffmpeg_progress(None)
+        self._run_ui_thread(self.storage_view.set_ffmpeg_installing, True, "Instaluji FFmpeg…")
         threading.Thread(target=self._ffmpeg_install_worker, daemon=True).start()
+        self._safe_page_update()
+
+    def _set_ffmpeg_progress(self, percent: float | None):
+        self._progress_bar.visible = True
+        self._progress_bar.value = percent / 100.0 if percent is not None else None
+        self._status_text.value = "Instaluji FFmpeg…"
+        self._status_text.color = COLOR_WARN
 
     def _ffmpeg_install_worker(self):
         def progress(percent, speed, eta):
             self._run_ui_thread(self._apply_ffmpeg_progress, percent, speed, eta)
 
         try:
-            installed = ffmpeg.download_and_install(
-                progress_cb=progress,
-                cancel_check=self._ffmpeg_cancel.is_set,
-            )
+            installed = ffmpeg.run_install(progress_cb=progress)
         except Exception as ex:
             self._run_ui_thread(self._apply_ffmpeg_install_failed, str(ex))
         else:
@@ -549,39 +516,39 @@ class GuiApp:
             if now - self._last_ffmpeg_progress < 0.15:
                 return
             self._last_ffmpeg_progress = now
-            self._ffmpeg_progress.value = percent / 100.0
-            self._ffmpeg_text.value = f"FFmpeg: {percent:.1f}%  \u2022  {speed}  \u2022  Zbývá: {eta}"
+            text = f"Instaluji FFmpeg… {percent:.1f}%  \u2022  {speed}  \u2022  Zbývá: {eta}"
+            self._progress_bar.visible = True
+            self._progress_bar.value = percent / 100.0
+            self._status_text.value = text
+            self._status_text.color = COLOR_WARN
+            self.storage_view.set_ffmpeg_installing(True, text, percent)
             self._safe_page_update()
 
     def _apply_ffmpeg_install_done(self, ok: bool):
         with self._ui_lock:
             self._ffmpeg_installing = False
-            self._ffmpeg_cancel_btn.visible = False
-            self._ffmpeg_progress.visible = False
+            self.storage_view.set_ffmpeg_installing(False)
             if ok:
-                self._ffmpeg_banner.visible = False
-                self._status_text.value = "FFmpeg připraven – ořez a MP3 jsou k dispozici."
+                self._status_text.value = "FFmpeg připraven."
                 self._status_text.color = COLOR_SUCCESS
-                self._rebuild_active_tab()
             else:
-                self._ffmpeg_btn.visible = True
-                self._ffmpeg_text.value = "Stažení FFmpeg se nepodařilo. Zkus to znovu."
+                self._status_text.value = "FFmpeg se nepodařilo nainstalovat. Zkus to v Nastavení."
+                self._status_text.color = COLOR_WARN
+            if not self._is_downloading:
+                self._progress_bar.visible = False
+            else:
+                self._progress_bar.value = None
             self._safe_page_update()
 
     def _apply_ffmpeg_install_failed(self, error: str):
         with self._ui_lock:
             self._ffmpeg_installing = False
-            self._ffmpeg_btn.visible = True
-            self._ffmpeg_cancel_btn.visible = False
-            self._ffmpeg_progress.visible = False
-            self._ffmpeg_text.value = (
-                f"Stažení FFmpeg selhalo ({error}). Návod na ruční instalaci najdeš "
-                "v nápovědě (ikona ❓ v horní liště)."
-            )
+            self.storage_view.set_ffmpeg_installing(False)
+            self._status_text.value = f"FFmpeg se nepodařilo nainstalovat ({error}). Návod najdeš v nápovědě."
+            self._status_text.color = COLOR_WARN
+            if not self._is_downloading:
+                self._progress_bar.visible = False
             self._safe_page_update()
-
-    def _on_cancel_ffmpeg_download(self, e=None):
-        self._ffmpeg_cancel.set()
 
     def _safe_page_update(self):
         import contextlib
@@ -645,6 +612,8 @@ class GuiApp:
 
     def _apply_progress(self, percent: float, speed: str, eta: str):
         with self._ui_lock:
+            if self._ffmpeg_installing:
+                return
             now = time.time()
             if now - self._last_progress_update > 0.15:
                 self._last_progress_update = now
@@ -655,6 +624,8 @@ class GuiApp:
     def _apply_status(self, text: str, color: str):
         with self._ui_lock:
             self._append_logs()
+            if self._ffmpeg_installing:
+                return
             self._status_text.value = text
             self._status_text.color = color
             self._safe_page_update()
@@ -790,10 +761,7 @@ class GuiApp:
         self._safe_page_update()
         needs_ffmpeg = not params.whole_video or params.format_choice != FORMAT_MP4
         if needs_ffmpeg and ffmpeg.find_ffmpeg() is None:
-            self.on_status(
-                "FFmpeg chybí – bez něj ořez a MP3 nefungují. Stáhni ho tlačítkem v dolní liště.",
-                COLOR_WARN,
-            )
+            self._start_ffmpeg_install(auto=True)
         started = self._manager.start_download(params)
         if not started:
             self._force_unlock_ui()
