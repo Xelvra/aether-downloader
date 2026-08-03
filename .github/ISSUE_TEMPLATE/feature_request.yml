@@ -1,0 +1,29 @@
+name: Návrh funkce
+description: Navrhni novou funkci nebo vylepšení
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Děkujeme za nápad! Než ho pošleš, koukni do README a nápovědy v aplikaci –
+        možná to už umí.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problém nebo potřeba
+      description: Co se snažíš vyřešit a proč?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Navrhované řešení
+      description: Jak by měla funkce vypadat a chovat se?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativy
+      description: Co jiného jsi zkoušel? Co by šlo místo toho?

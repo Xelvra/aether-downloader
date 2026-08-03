@@ -1,0 +1,62 @@
+name: Nahlásit chybu
+description: Nahlas chybu nebo nesprávné chování aplikace
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Děkujeme za nahlášení! Než issue vytvoříš, zkontroluj, jestli podobný problém
+        už neexistuje v [issues](https://github.com/Xelvra/aether-downloader/issues).
+        Citlivé údaje (cookies, tokeny) nikdy neposílej veřejně.
+  - type: input
+    id: version
+    attributes:
+      label: Verze aplikace
+      description: Verze v podobě `v1.3.3` – najdeš ji v názvu staženého souboru.
+      placeholder: v1.3.3
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operační systém
+      description: OS a verze (např. Windows 11, Ubuntu 24.04, macOS 15, Android/Termux).
+      placeholder: Windows 11
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Adresa videa (URL)
+      description: Odkud stahuješ (YouTube, Kick, Twitch, jiný web).
+      placeholder: https://www.youtube.com/watch?v=...
+  - type: textarea
+    id: steps
+    attributes:
+      label: Kroky k reprodukci
+      description: Co jsi dělal krok za krokem.
+      placeholder: |
+        1. Spustil jsem aplikaci…
+        2. Vložil odkaz…
+        3. Klikl na Stáhnout…
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Očekávané chování
+      description: Co se mělo stát.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Skutečné chování
+      description: Co se stalo místo toho. Klidně přidej screenshot nebo logy.
+    validations:
+      required: true
