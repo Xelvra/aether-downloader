@@ -88,7 +88,6 @@ class StorageView:
             icon=ft.Icons.DOWNLOAD,
             on_click=lambda e: self._on_ffmpeg_install() if self._on_ffmpeg_install else None,
         )
-        self.ffmpeg_progress = ft.ProgressBar(visible=False, height=sz(4), color=COLOR_ACCENT, bgcolor=COLOR_SURFACE)
         self._ffmpeg_installing = False
         self.refresh_ffmpeg_status()
 
@@ -193,32 +192,27 @@ class StorageView:
         self.ffmpeg_install_btn.content = "Přeinstalovat FFmpeg" if installed else "Stáhnout FFmpeg"
         if not self._ffmpeg_installing:
             self.ffmpeg_install_btn.visible = True
-            self.ffmpeg_progress.visible = False
 
-    def set_ffmpeg_installing(self, installing: bool, text: str = "", percent: float | None = None):
-        """Průběh instalace FFmpeg přímo v sekci Nastavení."""
+    def set_ffmpeg_installing(self, installing: bool, text: str = ""):
+        """Stav instalace FFmpeg v sekci Nastavení.
+
+        Průběh se zobrazuje ve společném progress pruhu aplikace (jako u
+        stahování) – tady se jen přepne status a skryje tlačítko, aby se
+        nezobrazovaly dva progress pruhy najednou.
+        """
         self._ffmpeg_installing = installing
         if installing:
             self.ffmpeg_install_btn.visible = False
-            self.ffmpeg_progress.visible = True
-            self.ffmpeg_progress.value = percent / 100.0 if percent is not None else None
             self.ffmpeg_status_text.value = text or "Instaluji FFmpeg…"
             self.ffmpeg_status_text.color = COLOR_WARN
         else:
-            self.ffmpeg_progress.visible = False
             self.refresh_ffmpeg_status()
 
     def _build_ffmpeg_row(self):
-        return ft.Column(
-            [
-                ft.Row(
-                    [self.ffmpeg_status_text, self.ffmpeg_install_btn],
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    spacing=sz(12),
-                ),
-                self.ffmpeg_progress,
-            ],
-            spacing=sz(6),
+        return ft.Row(
+            [self.ffmpeg_status_text, self.ffmpeg_install_btn],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            spacing=sz(12),
         )
 
     def _on_picker_result(self, path: str | None):

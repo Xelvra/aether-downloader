@@ -65,6 +65,7 @@ class GuiApp:
         self._unlock_timer: threading.Timer | None = None
         self._ui_lock = threading.Lock()
         self._resize_timer: threading.Timer | None = None
+        self._resize_bucket: tuple[bool, bool] | None = None
 
         self._setup_page()
         self._build_help_overlay()
@@ -75,7 +76,17 @@ class GuiApp:
         self._build_nav()
         self._build_content_area()
         self._build_layout()
+        self._resize_bucket = self._layout_bucket()
         self._page.update()
+
+    def _layout_bucket(self) -> tuple[bool, bool]:
+        """Příznaky rozložení: (compact, mobile) podle šířky okna.
+
+        Rozložení závisí jen na překročení breakpointů – resize uvnitř stejného
+        pásma nic nepřebudovává (žádné poskakování prvků při změně velikosti).
+        """
+        width = self._read_page_width()
+        return (width < BREAKPOINT_COMPACT, width < BREAKPOINT_MOBILE_NAV)
 
     def _run_ui_thread(self, handler, *args) -> None:
         import contextlib
@@ -119,6 +130,10 @@ class GuiApp:
         if width <= 0:
             width = self._read_page_width()
         th.set_screen_width(width)
+        bucket = (width < BREAKPOINT_COMPACT, width < BREAKPOINT_MOBILE_NAV)
+        if bucket == self._resize_bucket:
+            return
+        self._resize_bucket = bucket
         if self._resize_timer:
             self._resize_timer.cancel()
         self._resize_timer = threading.Timer(0.15, self._schedule_apply_resize)
@@ -521,7 +536,7 @@ class GuiApp:
             self._progress_bar.value = percent / 100.0
             self._status_text.value = text
             self._status_text.color = COLOR_WARN
-            self.storage_view.set_ffmpeg_installing(True, text, percent)
+            self.storage_view.set_ffmpeg_installing(True, text)
             self._safe_page_update()
 
     def _apply_ffmpeg_install_done(self, ok: bool):

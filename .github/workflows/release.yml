@@ -127,6 +127,7 @@ jobs:
           ffmpeg._download(url, dest, None, None)
           if not ffmpeg._looks_like_archive(dest) or dest.stat().st_size < 1_000_000:
               print(f"Mirror asset není platný archiv, přeskočeno: {name}")
+              dest.unlink(missing_ok=True)
               raise SystemExit(0)
           digest = hashlib.sha256(dest.read_bytes()).hexdigest()
           (stage / f"{name}.sha256").write_text(f"{digest}  {name}\n", encoding="utf-8")
