@@ -305,6 +305,12 @@ sudo dnf install binutils      # Fedora
 
 Pro spuštění CI musí být `uv.lock` v synchronizaci s `pyproject.toml` (kontrola přes `uv sync --locked`).
 
+### Testování platforem
+
+- **Linux** — hlavní vývojová platforma. Vše (ruff, mypy, pytest, GUI testy, build i smoke test) běží v CI na Ubuntu a je testováno na 100 %.
+- **Windows** — binárka se v CI sestavuje a prochází smoke testem; interaktivní použití ověřuje vývojář přes **Wine**, nativní běh pak potvrzuje komunita.
+- **macOS a ostatní buildy** — CI sestavuje `.app` (Apple Silicon i Intel) a spouští smoke test; reálné použití ověřuje **komunita**.
+
 ### Vydání (release)
 
 `.github/workflows/release.yml` se spouští při push tagu `v*` (např. `v1.3.0`):

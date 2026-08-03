@@ -189,6 +189,8 @@ Prosím nepiš přímo do soukromých zpráv — na Discordu ti pomůže komunit
 | macOS | 12+ (Intel i Apple Silicon) |
 | Android | přes Termux, spuštění ze zdrojového kódu |
 
+> **Testování platforem:** vývoj a hlavní testování probíhá na **Linuxu (100 %)**. **Windows** se ověřuje přes **Wine**, **macOS** a ostatní buildy testuje **komunita** — při problému nahlas chybu na [GitHub Issues](https://github.com/Xelvra/aether-downloader/issues).
+
 ---
 
 ## Historie verzí
