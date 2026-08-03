@@ -41,9 +41,11 @@ Podrobný postup pro konkrétní systém najdeš níže (Android viz [zde](#-and
 
 ## Ukázky
 
-| Stahování | Ořez a kvalita | Nastavení |
-|---|---|---|
-| ![Hlavní karta](docs/screenshots/download.png) | ![Ořez a kvalita](docs/screenshots/crop.png) | ![Nastavení](docs/screenshots/settings.png) |
+![Stahování](docs/screenshots/download.png)
+
+![Ořez a kvalita](docs/screenshots/crop.png)
+
+![Nastavení](docs/screenshots/settings.png)
 
 ---
 
