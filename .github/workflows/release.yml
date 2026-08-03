@@ -9,8 +9,26 @@ permissions:
   contents: write
 
 jobs:
+  check-version:
+    name: Check tag = APP_VERSION
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Ověřit shodu tagu s APP_VERSION
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_NAME}" != v* ]]; then
+            echo "Bez tagu (manuální build) – kontrola přeskočena."
+            exit 0
+          fi
+          APP_VER="$(python3 -c 'import re;print(re.search(r'"'"'APP_VERSION = "([^"]+)"'"'"',open("stahovac/config/constants.py").read()).group(1))')"
+          echo "tag=${GITHUB_REF_NAME} app_version=v${APP_VER}"
+          test "${GITHUB_REF_NAME}" = "v${APP_VER}" || {
+            echo "Tag neodpovídá APP_VERSION v stahovac/config/constants.py."; exit 1; }
+
   build:
     name: Build (${{ matrix.os }})
+    needs: check-version
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

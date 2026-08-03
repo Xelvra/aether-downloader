@@ -20,6 +20,8 @@ jobs:
         run: uv sync --locked --extra dev
       - name: Ruff
         run: uv run ruff check .
+      - name: Ruff format
+        run: uv run ruff format --check .
       - name: Mypy
         run: uv run mypy stahovac
 
@@ -36,6 +38,34 @@ jobs:
         run: uv sync --locked --extra dev
       - name: Coverage
         run: uv run pytest --cov=stahovac --cov-report=term-missing
+
+  test-windows:
+    name: Tests (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - name: Sync deps
+        run: uv sync --locked --extra dev
+      - name: Tests
+        run: uv run pytest --ignore=tests/test_gui_web.py
+
+  test-macos:
+    name: Tests (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - name: Sync deps
+        run: uv sync --locked --extra dev
+      - name: Tests
+        run: uv run pytest --ignore=tests/test_gui_web.py
 
   build:
     name: Build smoke test
@@ -82,3 +112,13 @@ jobs:
         with:
           name: gui-screenshots
           path: .screenshots/
+
+  security:
+    name: Security audit (OSV)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: OSV-Scanner
+        uses: google/osv-scanner-action@v2
+        with:
+          scan-args: "-r"
