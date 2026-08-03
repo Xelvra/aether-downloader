@@ -4,6 +4,16 @@
 
 - _(zatím žádné změny)_
 
+## [1.3.2] – 2026-08-03
+
+### Opraveno
+- Dvojitý progress bar při instalaci FFmpeg – průběh se zobrazuje jen ve společném pruhu aplikace, ne v Nastavení.
+- Poskakování prvků v UI při změně velikosti okna – rozložení se přebudovává jen při překročení breakpointu, ne při každém tahu okna.
+- Neplatný FFmpeg mirror asset se už nedostane do release (při přeskočení se soubor smaže, nepřihraje se omylem).
+
+### Změněno
+- Release má v popisu průvodce stažením (přehledné odkazy na binárky pro každý systém) a kontrolní součty v rozbalovací sekci místo samostatných souborů – v seznamu souborů zůstanou jen binárky a FFmpeg assety.
+
 ## [1.3.1] – 2026-08-03
 
 ### Opraveno

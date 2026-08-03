@@ -308,6 +308,8 @@ Na macOS se build spouští s `--onedir` (zabalí se do `stahovac.app`), na Linu
 - **Mirror assety**: staging krok nahraje oficiální statické buildy (`ffmpeg-linux-*.tar.xz`, `ffmpeg-windows-*.zip`, `ffmpeg-macos.zip`) + soubory `.sha256`. Krok je **best-effort** a před nahráním **validuje archiv** (magické byty + velikost) – neplatný se přeskočí, build se nezablokuje.
 - **Runtime**: aplikace stahuje FFmpeg přednostně z mirroru (GitHub releases) s **SHA256 ověřením**; při neplatném mirror archivu nebo chybějícím assetu spadne na oficiální upstream.
 
+**Popis release** je ruční (job „Build release body") – obsahuje průvodce stažením (odkazy na binárky pro každý systém) a kontrolní součty v rozbalovací sekci. Binárky `stahovac-*.sha256` se do release nenahrávají (jsou jen v popisu); do release jdou jen binárky a `ffmpeg-*` assety.
+
 Před tagem lokálně ověř:
 
 ```bash

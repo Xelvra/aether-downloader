@@ -154,11 +154,54 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+      - name: Build release body
+        run: |
+          TAG="$GITHUB_REF_NAME"
+          BASE="https://github.com/Xelvra/aether-downloader/releases/download/$TAG"
+          BODY="body.md"
+          {
+            echo "## Stáhni si správný soubor"
+            echo ""
+            echo "- **Windows** → [stahovac-windows-x86_64.exe]($BASE/stahovac-windows-x86_64.exe)"
+            echo "- **Linux** → [stahovac-linux-x86_64]($BASE/stahovac-linux-x86_64)"
+            echo "- **macOS (Apple Silicon, M1 a novější)** → [stahovac-macos-arm64.app.zip]($BASE/stahovac-macos-arm64.app.zip)"
+            echo "- **macOS (Intel)** → [stahovac-macos-x86_64.app.zip]($BASE/stahovac-macos-x86_64.app.zip)"
+            echo ""
+            echo "> macOS: rozbal ZIP a přesuň aplikaci **stahovac.app** do složky Aplikace. Při prvním spuštění ji povol (pravé tlačítko → Otevřít)."
+            echo ""
+            echo "## Ověření integrity (SHA256)"
+            echo ""
+            echo "<details>"
+            echo "<summary>Kontrolní součty všech souborů</summary>"
+            echo ""
+            for f in artifacts/stahovac-*.sha256; do cat "$f"; done
+            echo ""
+            echo "</details>"
+            echo ""
+            echo "## Co jsou ostatní soubory"
+            echo ""
+            echo "- **\`ffmpeg-*\` a \`ffmpeg-*.sha256\`** – oficiální statické buildy FFmpeg. Aplikace si je stahuje sama z GitHubu (se SHA256 ověřením) – ručně je stahovat nemusíš."
+            echo "- **Source code (zip / tar.gz)** – zdrojový kód pro vývojáře."
+          } > "$BODY"
+          cat "$BODY"
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            artifacts/* \
+          FILES=""
+          for f in \
+            artifacts/stahovac-windows-x86_64.exe \
+            artifacts/stahovac-linux-x86_64 \
+            artifacts/stahovac-macos-arm64.app.zip \
+            artifacts/stahovac-macos-x86_64.app.zip \
+            artifacts/ffmpeg-windows-x86_64-essentials.zip \
+            artifacts/ffmpeg-windows-x86_64-essentials.zip.sha256 \
+            artifacts/ffmpeg-macos.zip \
+            artifacts/ffmpeg-macos.zip.sha256 \
+            artifacts/ffmpeg-linux-x86_64-static.tar.xz \
+            artifacts/ffmpeg-linux-x86_64-static.tar.xz.sha256; do
+            if [ -f "$f" ]; then FILES="$FILES $f"; fi
+          done
+          gh release create "$GITHUB_REF_NAME" $FILES \
             --title "Aether Downloader $GITHUB_REF_NAME" \
-            --generate-notes
+            --notes-file body.md
