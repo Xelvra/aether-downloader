@@ -1,3 +1,4 @@
+import sys
 import threading
 import time
 from pathlib import Path
@@ -130,7 +131,7 @@ class TestBuildYdlOpts:
     def test_ffmpeg_location_when_found(self, monkeypatch):
         monkeypatch.setattr(dl_mod, "find_ffmpeg", lambda: Path("/opt/ffmpeg/bin/ffmpeg"))
         opts = _build_ydl_opts(_params(), {}, lambda d: None)
-        assert opts["ffmpeg_location"] == "/opt/ffmpeg/bin"
+        assert opts["ffmpeg_location"] == str(Path("/opt/ffmpeg/bin"))
 
     def test_ffmpeg_location_absent_when_missing(self, monkeypatch):
         monkeypatch.setattr(dl_mod, "find_ffmpeg", lambda: None)
@@ -467,7 +468,7 @@ class TestCutWithFfmpeg:
         monkeypatch.setattr(dl_mod.subprocess, "Popen", lambda *a, **k: object())
         result = dl._cut_with_ffmpeg(input_path, "00:00", "00:05", "Do určitého času")
         assert result == output_path
-        assert any("/opt/ffmpeg/bin/ffmpeg" in line for line in logs)
+        assert any(str(fake_bin) in line for line in logs)
 
 
 class TestBuildFfmpegCmd:
@@ -1407,6 +1408,7 @@ class TestProcessHelpers:
         def kill(self):
             self.killed = True
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Linux-specific")
     def test_kill_linux_fallback(self, monkeypatch):
         proc = self.FakeProc(123)
         monkeypatch.setattr(dl_mod.platform, "system", lambda: "Linux")

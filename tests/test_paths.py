@@ -47,13 +47,13 @@ class TestFrozenBaseDir:
         monkeypatch.setattr(sys, "frozen", True, raising=False)
         monkeypatch.setattr(sys, "platform", "linux")
         monkeypatch.setattr(sys, "executable", "/home/user/bin/stahovac")
-        assert get_frozen_base_dir() == Path("/home/user/bin")
+        assert get_frozen_base_dir() == Path("/home/user/bin").absolute()
 
     def test_non_bundle_macos_binary_uses_executable_dir(self, monkeypatch):
         monkeypatch.setattr(sys, "frozen", True, raising=False)
         monkeypatch.setattr(sys, "platform", "darwin")
         monkeypatch.setattr(sys, "executable", "/opt/stahovac/stahovac")
-        assert get_frozen_base_dir() == Path("/opt/stahovac")
+        assert get_frozen_base_dir() == Path("/opt/stahovac").absolute()
 
 
 class TestMigrateBundleData:

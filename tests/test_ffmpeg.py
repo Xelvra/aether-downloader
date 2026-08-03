@@ -1,5 +1,6 @@
 import io
 import json
+import sys
 import tarfile
 import threading
 import time
@@ -32,6 +33,9 @@ from stahovac.core.ffmpeg import (
     wait_until_ready,
 )
 from stahovac.utils.paths import set_base_dir
+
+_BIN_NAME = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
+_PROBE_NAME = "ffprobe.exe" if sys.platform == "win32" else "ffprobe"
 
 
 class FakeResponse:
@@ -128,22 +132,23 @@ class TestFindFfmpeg:
     def test_local_fallback(self, monkeypatch, base):
         monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
         (base / "bin").mkdir()
-        binary = base / "bin" / "ffmpeg"
+        binary = base / "bin" / _BIN_NAME
         binary.write_text("#!/bin/sh\n")
         binary.chmod(0o755)
         assert find_ffmpeg() == binary.resolve()
 
-    def test_none_when_missing(self, monkeypatch, base):
-        monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
-        monkeypatch.setattr(ffmpeg_mod, "_MACOS_HOMEBREW_PATHS", ())
-        assert find_ffmpeg() is None
-
+    @pytest.mark.skipif(sys.platform == "win32", reason="kontrola spustitelnosti je jen na POSIX")
     def test_local_ignored_when_not_executable(self, monkeypatch, base):
         monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
         monkeypatch.setattr(ffmpeg_mod, "_MACOS_HOMEBREW_PATHS", ())
         (base / "bin").mkdir()
-        (base / "bin" / "ffmpeg").write_text("x")
+        (base / "bin" / _BIN_NAME).write_text("x")
         monkeypatch.setattr(ffmpeg_mod.os, "access", lambda path, mode: False)
+        assert find_ffmpeg() is None
+
+    def test_none_when_missing(self, monkeypatch, base):
+        monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
+        monkeypatch.setattr(ffmpeg_mod, "_MACOS_HOMEBREW_PATHS", ())
         assert find_ffmpeg() is None
 
     def test_macos_homebrew_fallback(self, monkeypatch, base):
@@ -175,7 +180,7 @@ class TestBundledFfmpeg:
         monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
         meipass = base / "meipass"
         meipass.mkdir()
-        binary = meipass / "ffmpeg"
+        binary = meipass / _BIN_NAME
         binary.write_text("#!/bin/sh\n")
         binary.chmod(0o755)
         monkeypatch.setattr(ffmpeg_mod.sys, "frozen", True, raising=False)
@@ -186,7 +191,7 @@ class TestBundledFfmpeg:
         monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: "/usr/bin/ffmpeg")
         meipass = base / "meipass"
         meipass.mkdir()
-        bundled = meipass / "ffmpeg"
+        bundled = meipass / _BIN_NAME
         bundled.write_text("#!/bin/sh\n")
         bundled.chmod(0o755)
         monkeypatch.setattr(ffmpeg_mod.sys, "frozen", True, raising=False)
@@ -197,17 +202,18 @@ class TestBundledFfmpeg:
         monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
         meipass = base / "meipass"
         meipass.mkdir()
-        bundled = meipass / "ffmpeg"
+        bundled = meipass / _BIN_NAME
         bundled.write_text("#!/bin/sh\n")
         bundled.chmod(0o755)
         (base / "bin").mkdir()
-        local = base / "bin" / "ffmpeg"
+        local = base / "bin" / _BIN_NAME
         local.write_text("#!/bin/sh\n")
         local.chmod(0o755)
         monkeypatch.setattr(ffmpeg_mod.sys, "frozen", True, raising=False)
         monkeypatch.setattr(ffmpeg_mod.sys, "_MEIPASS", str(meipass), raising=False)
         assert find_ffmpeg() == bundled.resolve()
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="kontrola spustitelnosti je jen na POSIX")
     def test_meipass_ignored_when_not_executable(self, monkeypatch, base):
         monkeypatch.setattr(ffmpeg_mod.shutil, "which", lambda name: None)
         monkeypatch.setattr(ffmpeg_mod, "_MACOS_HOMEBREW_PATHS", ())
@@ -511,9 +517,9 @@ class TestDownloadAndInstall:
         )
         monkeypatch.setattr(ffmpeg_mod, "_smoke_test", lambda target: None)
         path = download_and_install()
-        assert path == base / "bin" / "ffmpeg"
-        assert (base / "bin" / "ffmpeg").read_bytes() == b"ffmpeg-binary"
-        assert (base / "bin" / "ffprobe").read_bytes() == b"ffprobe-binary"
+        assert path == base / "bin" / _BIN_NAME
+        assert (base / "bin" / _BIN_NAME).read_bytes() == b"ffmpeg-binary"
+        assert (base / "bin" / _PROBE_NAME).read_bytes() == b"ffprobe-binary"
         assert list((base / "bin").glob(".ffmpeg-download-*")) == []
 
     def test_unsupported_platform_returns_none(self, monkeypatch):

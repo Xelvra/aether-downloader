@@ -1,8 +1,10 @@
 """Auditové testy pro nekryté větve stahovac.core.downloader (coverage report)."""
 
 import subprocess
+import sys
 from pathlib import Path
 
+import pytest
 import yt_dlp
 
 import stahovac.core.downloader as dl_mod
@@ -77,6 +79,7 @@ class TestKillProcess:
                 raise subprocess.TimeoutExpired(["cmd"], timeout)
             return 0
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Linux-specific")
     def test_linux_success(self, monkeypatch):
         proc = self.FakeProc(123)
         monkeypatch.setattr(dl_mod.platform, "system", lambda: "Linux")
@@ -87,6 +90,7 @@ class TestKillProcess:
         assert killed == [(999, dl_mod.signal.SIGTERM)]
         assert proc.waited == 1
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Linux-specific")
     def test_linux_terminate_then_kill(self, monkeypatch):
         proc = self.FakeProc(123)
         proc._wait_failures = 1
@@ -96,6 +100,7 @@ class TestKillProcess:
         assert proc.terminated == 1
         assert proc.killed == 1
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Linux-specific")
     def test_swallows_wait_errors(self, monkeypatch):
         proc = self.FakeProc(123)
 

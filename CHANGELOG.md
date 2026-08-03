@@ -2,7 +2,12 @@
 
 ## [Unreleased]
 
-- _(zatím žádné změny)_
+### Opraveno
+- Windows CI: testy cross-platform – cesty (`ffmpeg.exe`, absolutní cesty) a přeskočení Linux-specific testů na Windows (kill přes `os.getpgid`, kontrola spustitelnosti).
+
+### Změněno
+- CI: OSV-Scanner pin na `v2.3.8` (major tag `v2` neexistuje).
+- README: správné pořadí v Obsahu (Ukázky až za Rychlý start).
 
 ## [1.3.4] – 2026-08-03
 

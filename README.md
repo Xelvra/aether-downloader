@@ -14,8 +14,8 @@
 
 ## Obsah
 
-- [Ukázky](#ukázky)
 - [Rychlý start](#rychlý-start-3-kroky)
+- [Ukázky](#ukázky)
 - [Instalace](#instalace-a-spuštění)
 - [FFmpeg](#ffmpeg-instaluje-se-automaticky)
 - [Jak stáhnout první video](#jak-stáhnout-první-video)
