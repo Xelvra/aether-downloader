@@ -47,10 +47,9 @@ class TestWineToUnix:
             == "/tmp/prefix/dosdevices/c:/Users/pc/Downloads/x.mp4"
         )
 
-    def test_c_drive_default_prefix(self, monkeypatch, tmp_path):
+    def test_c_drive_without_prefix_unchanged(self, monkeypatch):
         monkeypatch.delenv("WINEPREFIX", raising=False)
-        result = sys_mod._wine_to_unix(r"C:\foo\x.mp4")
-        assert result.endswith("dosdevices/c:/foo/x.mp4")
+        assert sys_mod._wine_to_unix(r"C:\foo\x.mp4") == r"C:\foo\x.mp4"
 
     def test_native_path_unchanged(self):
         assert sys_mod._wine_to_unix("/home/pc/x.mp4") == "/home/pc/x.mp4"
@@ -119,12 +118,12 @@ class TestOpenPath:
         assert called == [str(tmp_path.resolve())]
 
     def test_windows_wine_uses_linux_opener(self, tmp_path, monkeypatch):
-        """Pod Wine se místo os.startfile použije Linux otevírač (unixová cesta)."""
+        """Pod Wine se místo os.startfile použije start /unix (Linux otevírač)."""
         monkeypatch.setattr(sys_mod.platform, "system", lambda: "Windows")
         monkeypatch.setattr(sys_mod, "_is_wine", lambda: True)
         monkeypatch.setattr(sys_mod, "_wine_to_unix", lambda p: "/tmp/unix/" + p.split(":")[-1])
         opened = []
-        monkeypatch.setattr(sys_mod, "_open_linux", lambda p: opened.append(p) or (True, ""))
+        monkeypatch.setattr(sys_mod, "_open_linux_wine", lambda p: opened.append(p) or (True, ""))
         ok, _ = open_path(str(tmp_path))
         assert ok is True
         assert opened, "Linux otevírač se měl použít pod Wine"
@@ -189,12 +188,12 @@ class TestRevealInFileManager:
         assert called == [["explorer", f"/select,{tmp_path.resolve()}"]]
 
     def test_windows_wine_uses_linux_reveal(self, tmp_path, monkeypatch):
-        """Pod Wine se místo explorer /select použije Linux správce souborů."""
+        """Pod Wine se místo explorer /select použije start /unix (Linux správce)."""
         monkeypatch.setattr(sys_mod.platform, "system", lambda: "Windows")
         monkeypatch.setattr(sys_mod, "_is_wine", lambda: True)
         monkeypatch.setattr(sys_mod, "_wine_to_unix", lambda p: "/tmp/unix/" + p.split(":")[-1])
         revealed = []
-        monkeypatch.setattr(sys_mod, "_reveal_linux", lambda p: revealed.append(p) or (True, ""))
+        monkeypatch.setattr(sys_mod, "_reveal_linux_wine", lambda p: revealed.append(p) or (True, ""))
         ok, _ = sys_mod.reveal_in_file_manager(str(tmp_path))
         assert ok is True
         assert revealed, "Linux správce souborů se měl použít pod Wine"
@@ -246,3 +245,67 @@ class TestRevealInFileManager:
         monkeypatch.setattr(sys_mod, "_open_linux", lambda path: (True, ""))
         ok, _ = sys_mod.reveal_in_file_manager(str(tmp_path))
         assert ok is True
+
+
+class TestOpenLinuxWine:
+    def test_uses_start_unix_with_xdg_open(self, monkeypatch):
+        calls = []
+
+        def fake_run(cmd, timeout=10):
+            calls.append(cmd)
+            return (True, "")
+
+        monkeypatch.setattr(sys_mod, "_run", fake_run)
+        ok, _ = sys_mod._open_linux_wine("/home/pc/v.mp4")
+        assert ok is True
+        assert calls[0] == ["start", "/unix", "/usr/bin/xdg-open", "/home/pc/v.mp4"]
+
+    def test_gio_uses_open_subcommand(self, monkeypatch):
+        calls = []
+
+        def fake_run(cmd, timeout=10):
+            calls.append(cmd)
+            return (True, "") if any("gio" in c for c in cmd) else (False, "nic")
+
+        monkeypatch.setattr(sys_mod, "_run", fake_run)
+        ok, _ = sys_mod._open_linux_wine("/home/pc/v.mp4")
+        assert ok is True
+        assert "open" in calls[1]
+
+    def test_all_openers_fail_reports_reason(self, monkeypatch):
+        monkeypatch.setattr(sys_mod, "_run", lambda cmd, timeout=10: (False, "žádný program"))
+        ok, message = sys_mod._open_linux_wine("/home/pc/v.mp4")
+        assert ok is False
+        assert message
+
+
+class TestRevealLinuxWine:
+    def test_uses_start_unix_with_file_manager(self, monkeypatch):
+        calls = []
+
+        def fake_run(cmd, timeout=10):
+            calls.append(cmd)
+            return (True, "") if any("dolphin" in c for c in cmd) else (False, "nenalezen")
+
+        monkeypatch.setattr(sys_mod, "_run", fake_run)
+        ok, _ = sys_mod._reveal_linux_wine("/home/pc/v.mp4")
+        assert ok is True
+        assert calls[0] == ["start", "/unix", "/usr/bin/nautilus", "--select", "/home/pc/v.mp4"]
+        assert any("dolphin" in part for c in calls for part in c)
+
+    def test_falls_back_to_opening_parent_folder(self, monkeypatch):
+        calls = []
+
+        def fake_run(cmd, timeout=10):
+            calls.append(cmd)
+            return (False, "nenalezen")
+
+        def fake_open_linux_wine(path):
+            calls.append(["open", path])
+            return (True, "")
+
+        monkeypatch.setattr(sys_mod, "_run", fake_run)
+        monkeypatch.setattr(sys_mod, "_open_linux_wine", fake_open_linux_wine)
+        ok, _ = sys_mod._reveal_linux_wine("/home/pc/v.mp4")
+        assert ok is True
+        assert calls[-1] == ["open", "/home/pc"]
