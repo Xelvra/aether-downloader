@@ -64,10 +64,14 @@ aether-downloader/
 │   │   └── manager.py          # JSON konfigurace (načítání, migrace, oprava typů, atomický zápis)
 │   ├── core/
 │   │   ├── __init__.py         # Inicializace balíčku core
-│   │   ├── downloader.py       # Univerzální stahovací engine (job workspace, FFmpeg strategie, cancel, timeouty)
+│   │   ├── downloader.py       # Orchestrátor stahování – worker state machine, přesun souborů, finish/cancel
+│   │   ├── _ffmpeg.py          # FFmpeg: buildery příkazů + FfmpegTrimMixin (ořez, sledování procesu)
+│   │   ├── _hls_ranged.py      # Ranged stahování z HLS segmentů (Kick/Twitch) – HlsRangedMixin
+│   │   ├── _process.py         # Child procesy (tracking/kill), sanitizace příkazů, souborové helpery
+│   │   ├── _ytdlp.py           # yt-dlp: opce, retry, klasifikace chyb – YtDlpMixin
 │   │   ├── ffmpeg.py           # Detekce, stažení a instalace FFmpeg do bin/ (bez GUI, čistá logika)
 │   │   ├── metadata.py         # Načítání metadat o videu (cache, vlákna, cancel_check)
-│   │   └── validator.py        # Validace URL, časových údajů a CRF
+│   │   └── validator.py        # Validace URL, časových údajů, CRF + validate_download_params()
 │   ├── platforms/               # Platformně specifická logika – 1 soubor = 1 web
 │   │   ├── __init__.py         # Registr: dispečink host → platforma, platform_opts()
 │   │   ├── base.py             # Sdílené základy (browser hlavičky, base_opts)

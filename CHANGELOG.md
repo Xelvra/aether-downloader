@@ -16,6 +16,7 @@
 - Ikonky: `ICON_SIZE`/`ICON_SIZE_LARGE` (zamrzlé konstanty z importu) nahrazeny funkcemi `icon_size()`/`icon_size_large()` v `theme.py` – ikony se teď škálují konzistentně se `sz()` při přechodu přes breakpointy (audit §4.2).
 - Validace stahování: validační řetězec (URL, časový rozsah, CRF) přesunut z `GuiApp._start_download_impl` do `core/validator.py::validate_download_params()` s fasádou `DownloadManager.validate()` – validace už nežije v GUI vrstvě, může ji použít i budoucí CLI/vstupní bod (audit §6.2).
 - FFmpeg instalace: flow (start/progress/done/failed) vydělen z `GuiApp` do nového `FfmpegInstallController` (`gui/ffmpeg_install.py`); `GuiApp` jen deleguje přes `self.ffmpeg_install` (audit §6.2).
+- Rozdělení `core/downloader.py` (902 → 300 řádků, audit §6.1): odpovědnosti přesunuty do `core/_ytdlp.py` (`YtDlpMixin` – opce, retry, klasifikace chyb), `core/_ffmpeg.py` (`FfmpegTrimMixin` – ořez, sledování procesu), `core/_hls_ranged.py` (`HlsRangedMixin` – ranged HLS), `core/_process.py` (child procesy, sanitizace, souborové helpery). `Downloader` zůstává orchestrátor a re-exportuje symboly, takže importy testů zůstaly beze změny.
 
 ## [1.3.4] – 2026-08-03
 
