@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.3.5] – 2026-08-04
+
 ### Opraveno
 - Windows CI: testy cross-platform – cesty (`ffmpeg.exe`, absolutní cesty) a přeskočení Linux-specific testů na Windows (kill přes `os.getpgid`, kontrola spustitelnosti).
 - Ctrl+C / shutdown aplikace (Termux, web režim): `main()` už nespolkne `CancelledError` – flet-web tak po zrušení session nevolá `after_event()` na zrušenou (None) session a při ukončení se nevypíše traceback `AttributeError: 'NoneType' object has no attribute 'after_event'`.
