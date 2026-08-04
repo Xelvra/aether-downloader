@@ -6,7 +6,8 @@ from pathlib import Path
 import flet as ft
 
 from stahovac.platforms import patch_platform_extractors
-from stahovac.utils.paths import get_frozen_base_dir, migrate_bundle_data, set_base_dir
+from stahovac.utils.logging import configure_logging
+from stahovac.utils.paths import get_base_dir, get_frozen_base_dir, migrate_bundle_data, set_base_dir
 
 
 def _noop():
@@ -50,6 +51,8 @@ def _setup_runtime() -> None:
     else:
         base = Path(os.environ.get("AETHER_BASE_DIR") or Path(__file__).resolve().parent.parent)
         set_base_dir(base)
+
+    configure_logging(get_base_dir())
 
     try:
         import flet.utils.pip as _flet_pip
