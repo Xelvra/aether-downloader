@@ -13,6 +13,7 @@
 - Dokumentace: Android (Termux) – do `pkg install` přidáno `git` (v Termuxu není předinstalovaný), `rust`, `binutils` a `clang` (kompilace balíčků bez Android kola); instalace bez dev balíčků `uv sync` – Playwright a PyInstaller nemají binárky pro Android, pro vývoj se vynechávají přes `--no-install-package`.
 - Refactoring (nálezy auditu): `StorageView._picker_mode` inicializováno v `__init__`; `_notify()` sjednoceno do sdílené `theme.notify()`; CRF coerce má jediný zdroj pravdy `coerce_crf()` v `config/app_config.py` (Downloader/GuiApp jen delegují); metadata cache používá sdílený eviction helper a `_add_to_cache` je dokumentovaný testovací seed helper.
 - Logování: nový `utils/logging.py::configure_logging()` – technické logy z `logging` modulu (Kick/metadata/ssl/yt-dlp) se už neztrácejí, ale píšou se do `app.log` v app-data adresáři (`RotatingFileHandler`, DEBUG) s konzolí na WARNING; zavolá se při startu v `_setup_runtime()`. Souborové logy pomůžou při hlášení bugů (Discord/GitHub Issues).
+- Ikonky: `ICON_SIZE`/`ICON_SIZE_LARGE` (zamrzlé konstanty z importu) nahrazeny funkcemi `icon_size()`/`icon_size_large()` v `theme.py` – ikony se teď škálují konzistentně se `sz()` při přechodu přes breakpointy (audit §4.2).
 
 ## [1.3.4] – 2026-08-03
 

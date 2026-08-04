@@ -9,7 +9,7 @@ from stahovac.gui.theme import (
     COLOR_SURFACE,
     COLOR_TEXT,
     COLOR_TEXT_SECONDARY,
-    ICON_SIZE,
+    icon_size,
     sz,
 )
 from stahovac.storage.history import HistoryManager
@@ -97,7 +97,7 @@ class LogsView:
                             [
                                 ft.Icon(
                                     ft.Icons.PLAY_CIRCLE_OUTLINED,
-                                    size=ICON_SIZE,
+                                    size=icon_size(),
                                     color=COLOR_ACCENT,
                                 ),
                                 ft.Column(
@@ -139,14 +139,14 @@ class LogsView:
                 ft.IconButton(
                     icon=ft.Icons.FOLDER_OPEN_ROUNDED,
                     icon_color=COLOR_ACCENT,
-                    icon_size=ICON_SIZE,
+                    icon_size=icon_size(),
                     tooltip="Otevřít složku",
                     on_click=lambda e: self._reveal_history_item(file_path),
                 ),
                 ft.IconButton(
                     icon=ft.Icons.PLAY_CIRCLE_OUTLINED,
                     icon_color=COLOR_SUCCESS,
-                    icon_size=ICON_SIZE,
+                    icon_size=icon_size(),
                     tooltip="Otevřít video",
                     on_click=lambda e: self._open_history_item(file_path),
                 ),

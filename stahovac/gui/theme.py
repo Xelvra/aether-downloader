@@ -30,8 +30,19 @@ def sz(base: int) -> int:
     return int(base * _get_scale())
 
 
-ICON_SIZE = sz(20)
-ICON_SIZE_LARGE = sz(24)
+def icon_size() -> int:
+    """Velikost ikony přepočítaná podle aktuální šířky okna.
+
+    Funkce místo modulové konstanty, aby se ikony škálovaly konzistentně
+    se `sz()` – widgety se rebuildují při přechodu přes breakpointy a tehdy
+    se velikost přepočítá. Konstanta spočítaná při importu by zůstala
+    zamrzlá na výchozí šířce 800 px.
+    """
+    return sz(20)
+
+
+def icon_size_large() -> int:
+    return sz(24)
 
 
 COLOR_PRIMARY = "#4A90D9"

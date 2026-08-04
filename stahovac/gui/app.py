@@ -32,8 +32,8 @@ from stahovac.gui.theme import (
     COLOR_SURFACE,
     COLOR_TEXT_SECONDARY,
     COLOR_WARN,
-    ICON_SIZE,
-    ICON_SIZE_LARGE,
+    icon_size,
+    icon_size_large,
     sz,
 )
 from stahovac.models import DownloadParams
@@ -300,7 +300,7 @@ class GuiApp:
             ft.IconButton(
                 icon=ft.Icons.MENU,
                 icon_color=COLOR_PRIMARY,
-                icon_size=ICON_SIZE,
+                icon_size=icon_size(),
                 tooltip="Menu",
                 on_click=self._open_drawer,
             )
@@ -342,7 +342,7 @@ class GuiApp:
                         content=ft.IconButton(
                             icon=ft.Icons.HELP_OUTLINE,
                             icon_color=COLOR_TEXT_SECONDARY,
-                            icon_size=ICON_SIZE_LARGE,
+                            icon_size=icon_size_large(),
                             tooltip="Nápověda",
                             on_click=self._show_help,
                         ),
