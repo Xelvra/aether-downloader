@@ -27,15 +27,17 @@ class _StorageView:
 
 
 class _Ui:
+    """Napodobuje reálný `GuiApp` – host atributy jsou privátní."""
+
     def __init__(self):
         self.storage_view = _StorageView()
-        self.progress_bar = _Bar()
-        self.status_text = _Text()
-        self.ui_lock = threading.Lock()
-        self.is_downloading = False
-        self.safe_page_update = lambda: None
+        self._progress_bar = _Bar()
+        self._status_text = _Text()
+        self._ui_lock = threading.Lock()
+        self._is_downloading = False
+        self._safe_page_update = lambda: None
 
-    def run_ui_thread(self, handler, *args):
+    def _run_ui_thread(self, handler, *args):
         return handler(*args)
 
 
@@ -66,7 +68,7 @@ class TestFfmpegInstallController:
         assert ctrl.installing is True
         assert ctrl._ui.storage_view.calls, "set_ffmpeg_installing mělo být zavoláno"
         assert ctrl._ui.storage_view.calls[0][0][0] is True
-        assert ctrl._ui.progress_bar.visible is True
+        assert ctrl._ui._progress_bar.visible is True
 
     def test_start_noop_when_already_installing(self, monkeypatch):
         from stahovac.core import ffmpeg
@@ -96,8 +98,8 @@ class TestFfmpegInstallController:
         ctrl._installing = True
         ctrl._worker()
         assert ctrl.installing is False
-        assert ctrl._ui.status_text.value == "FFmpeg připraven."
-        assert ctrl._ui.progress_bar.visible is False
+        assert ctrl._ui._status_text.value == "FFmpeg připraven."
+        assert ctrl._ui._progress_bar.visible is False
 
     def test_worker_reports_failure(self, monkeypatch):
         from stahovac.core import ffmpeg
@@ -110,15 +112,15 @@ class TestFfmpegInstallController:
         ctrl._installing = True
         ctrl._worker()
         assert ctrl.installing is False
-        assert "net down" in ctrl._ui.status_text.value
+        assert "net down" in ctrl._ui._status_text.value
 
     def test_progress_throttled_and_applied(self, monkeypatch):
         ctrl = _make(monkeypatch)
         ctrl._last_progress = time.time()
         ctrl._apply_progress(50, "1MiB/s", "00:10")
-        assert ctrl._ui.progress_bar.value is None  # zthrottled → beze změny
+        assert ctrl._ui._progress_bar.value is None  # zthrottled → beze změny
 
         ctrl._last_progress = 0.0
         ctrl._apply_progress(50, "1MiB/s", "00:10")
-        assert ctrl._ui.progress_bar.value == 0.5
-        assert "50.0%" in ctrl._ui.status_text.value
+        assert ctrl._ui._progress_bar.value == 0.5
+        assert "50.0%" in ctrl._ui._status_text.value

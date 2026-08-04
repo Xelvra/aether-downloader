@@ -8,6 +8,7 @@
 - Windows CI: testy cross-platform – cesty (`ffmpeg.exe`, absolutní cesty) a přeskočení Linux-specific testů na Windows (kill přes `os.getpgid`, kontrola spustitelnosti).
 - Ctrl+C / shutdown aplikace (Termux, web režim): `main()` už nespolkne `CancelledError` – flet-web tak po zrušení session nevolá `after_event()` na zrušenou (None) session a při ukončení se nevypíše traceback `AttributeError: 'NoneType' object has no attribute 'after_event'`.
 - CONTRIBUTING: opraveno časování nouzového odemykání UI – `180 s / +30 s / +30 s` → `8 s / +8 s` (soulad se skutečnými hodnotami v `gui/app.py`).
+- Auto-instalace FFmpeg (Windows bez FFmpeg, ořez/MP3): `FfmpegInstallController` přistupoval k host atributům přes veřejné názvy, ale `GuiApp` je má privátní – padalo `AttributeError: 'GuiApp' object has no attribute 'progress_bar'` a stahování (např. Twitch) se nespustilo. Oprava + regresní test reálného zapojení GuiApp → controller.
 
 ### Změněno
 - CI: OSV-Scanner pin na `v2.3.8` (major tag `v2` neexistuje).
