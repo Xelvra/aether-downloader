@@ -4,6 +4,7 @@
 
 ### Přidáno
 - Dokumentace: `DEVELOPMENT_RULES.md` (pevná vývojová pravidla – Red-Green-Refactor, každý bug nese regresní test, gate před commitem, determinismus) a `tests/README.md` (konvence testů), odkazy z CONTRIBUTING.
+- Testy GUI: `tests/test_gui_quality_view.py` a `tests/test_gui_download_view.py` – unit testy event handlerů a změn props (toggle času/reencode, end-option, `update_qualities`, debounce, `refresh_metadata`, `update_metadata_ui`, `set_downloading`).
 
 ### Změněno
 - Dokumentace: FFmpeg se automaticky stahuje vždy, když v systému chybí – ne jen k ořezu/MP3, ale i ke spojení obrazu se zvukem (merge) při stahování MP4. Aktualizováno v README a nápovědě v aplikaci (`help_content.py`).
