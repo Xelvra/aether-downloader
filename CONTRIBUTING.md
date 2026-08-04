@@ -43,20 +43,32 @@ aether-downloader/
 ├── build.py                    # Sestavení binárky (PyInstaller, --onefile/--onedir/--clean)
 ├── stahovac.spec               # Konfigurace PyInstalleru (onefile i onedir dle STAHOVAC_BUILD_MODE)
 ├── pyproject.toml              # Závislosti a nastavení nástrojů (ruff, mypy, pytest, coverage)
+├── uv.lock                     # Zámek závislostí pro správce balíků uv
 ├── README.md                   # Dokumentace pro koncové uživatele
 ├── CONTRIBUTING.md             # Tento soubor (dokumentace pro vývojáře)
+├── DEVELOPMENT_RULES.md        # Pevná vývojová pravidla (Red-Green-Refactor, gate, regresní testy)
+├── ROADMAP.md                  # Plánované funkce a architektonické změny (k diskusi)
+├── CHANGELOG.md                # Přehled verzí
+├── SECURITY.md                 # Postup hlášení zranitelností
+├── CODE_OF_CONDUCT.md          # Pravidla chování
 ├── LICENSE                     # MIT licence
 ├── LICENSE-THIRD-PARTY.md      # Licence závislostí (FFmpeg a další)
 ├── .gitignore                  # Definice souborů a složek ignorovaných Gitem
-├── uv.lock                     # Zámek závislostí pro správce balíků uv
-├── .github/workflows/ci.yml    # CI: ruff, mypy, pytest --cov, build smoke test
+├── hooks/pre-push              # Lokální pre-push hook (ruff, mypy, pytest)
+├── .github/
+│   ├── workflows/ci.yml        # CI: ruff, mypy, pytest --cov, build smoke test, GUI (Playwright), OSV
+│   ├── workflows/release.yml   # Release na push tagu v* (Windows/Linux/macOS, FFmpeg mirror)
+│   ├── ISSUE_TEMPLATE/         # Šablony issue (bug report, feature request)
+│   └── PULL_REQUEST_TEMPLATE.md
+├── tool/                       # Lokální dev nástroje (v .gitignore)
 ├── stahovac/
 │   ├── __init__.py             # Balíček
-│   ├── __main__.py             # Vstupní bod "python -m stahovac" + CLI (--web/--host/--port)
-│   ├── app.py                  # Propojení GUI s logikou (main → GuiApp)
-│   ├── downloader.py           # DownloadManager (jediný zdroj pravdy o stavu, job ID, filtrace stale jobů)
+│   ├── __main__.py             # Vstupní bod "python -m stahovac" + CLI (--web/--host/--port), _setup_runtime
+│   ├── app.py                  # main(page) – spouští GuiApp (CancelledError se propaguje)
+│   ├── downloader.py           # DownloadManager (fasáda, job ID, filtrace stale jobů)
 │   ├── state.py                # Stav aplikace (AppState)
 │   ├── models.py               # Datové modely (VideoMetadata, DownloadParams) + enum DownloadState
+│   ├── help_content.py         # Data nápovědy (HelpText/HelpCode/HelpQA) – oddělená od vykreslení
 │   ├── config/
 │   │   ├── __init__.py         # Inicializace balíčku config
 │   │   ├── app_config.py       # AppConfig dataclass (schema_version 2, koerce typů, validace CRF/presetů)
@@ -86,7 +98,8 @@ aether-downloader/
 │   │   ├── quality_view.py     # Karta ořezu a kvality
 │   │   ├── storage_view.py     # Karta nastavení (složka, cookies)
 │   │   ├── logs_view.py        # Karta historie a logů
-│   │   ├── help_view.py        # Obsah nápovědy (overlay)
+│   │   ├── help_view.py        # Vykreslení nápovědy (overlay)
+│   │   ├── ffmpeg_install.py   # FfmpegInstallController (instalace FFmpeg na pozadí)
 │   │   └── theme.py            # Barvy, fonty, responsivní škálování, tlačítka
 │   ├── storage/
 │   │   ├── __init__.py         # Inicializace balíčku storage
@@ -96,26 +109,29 @@ aether-downloader/
 │       ├── paths.py            # Cesty k souborům a adresářům
 │       ├── format.py           # Formátování rychlosti a odhadu času (sdílené s UI)
 │       ├── cookies.py          # Převod cookies na yt-dlp opce + validate_cookies_file
-│       └── system.py           # Otevření složky v průzkumníku
+│       ├── logging.py          # configure_logging – technické logy do app.log (RotatingFileHandler)
+│       ├── ssl.py              # SSL kontexty s CA certifikáty z certifi
+│       └── system.py           # Otevírání souborů/složek (vč. Wine fallbacku přes start /unix)
 └── tests/
     ├── __init__.py             # Inicializace testovacího balíčku
-    ├── test_config.py          # Konfigurace (AppConfig koerce, load/save/validace)
-    ├── test_constants.py       # Konstanty a enumy
-    ├── test_cookies.py         # Převod cookies na yt-dlp opce + validace cookie souboru
-    ├── test_downloader.py      # Worker, job workspace, FFmpeg strategie, cancel, timeouty, procesy
-    ├── test_downloader_helpers.py  # Formátování rychlosti/času
-    ├── test_ffmpeg.py          # Detekce FFmpeg, URL mapa, stažení/rozbalení/instalace (mockované)
-    ├── test_history.py         # Historie stahování (vč. atomického zápisu)
-    ├── test_kick.py            # KickAdapter + patch KickVODIE + verze yt-dlp
-    ├── test_manager.py         # DownloadManager (stale job filtrace, job ID)
-    ├── test_models.py          # Datové modely + DownloadState
-    ├── test_paths.py           # Cesty
-    ├── test_state.py           # AppState
-    ├── test_system.py          # Průzkumník souborů
-    └── test_validator.py       # Validace
+    ├── README.md               # Konvence testů (1 soubor = 1 modul, jak psát UI testy)
+    ├── gui_baselines/          # Playwright aria snapshot baselines
+    ├── test_app.py, test_main.py, test_audit_gaps.py
+    ├── test_config.py, test_constants.py, test_cookies.py
+    ├── test_downloader.py, test_downloader_gaps.py, test_downloader_helpers.py
+    ├── test_ffmpeg.py, test_ffmpeg_install.py, test_help_content.py
+    ├── test_history.py, test_kick.py, test_logging_setup.py
+    ├── test_manager.py, test_models.py, test_paths.py
+    ├── test_platforms.py, test_state.py, test_system.py
+    ├── test_theme.py, test_validator.py
+    ├── test_gui_app.py, test_gui_cancel.py, test_gui_crf.py, test_gui_ffmpeg.py
+    ├── test_gui_download_view.py, test_gui_quality_view.py, test_gui_logs_view.py
+    ├── test_gui_storage_view.py, test_gui_help_view.py, test_custom_file_picker.py
+    └── test_gui_web.py         # E2E přes Playwright (vyžaduje Chromium, jinak se přeskočí)
 ```
 
 > `tool/` je lokální adresář pro dev nástroje (v `.gitignore`), stejně jako `.coverage`, cesty a cache.
+> Mapování testovacích souborů na moduly najdeš v [tests/README.md](tests/README.md).
 
 ---
 

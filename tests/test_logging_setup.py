@@ -50,25 +50,6 @@ class TestConfigureLogging:
         finally:
             _cleanup(path)
 
-    def test_adds_stream_handler_when_missing(self, tmp_path):
-        root = logging.getLogger()
-        path = str(tmp_path / "app.log")
-        removed = [h for h in list(root.handlers) if isinstance(h, logging.StreamHandler)]
-        for h in removed:
-            root.removeHandler(h)
-        try:
-            configure_logging(tmp_path)
-            streams = [
-                h
-                for h in root.handlers
-                if isinstance(h, logging.StreamHandler) and not isinstance(h, RotatingFileHandler)
-            ]
-            assert streams, "StreamHandler se měl přidat, když chyběl"
-        finally:
-            _cleanup(path)
-            for h in removed:
-                root.addHandler(h)
-
     def test_never_raises_on_bad_dir(self, tmp_path):
         bad_file = tmp_path / "file"  # soubor, ne adresář -> mkdir selže
         bad_file.write_text("x")

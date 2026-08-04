@@ -612,19 +612,3 @@ class TestApplyMeta:
 
         app._apply_meta(_Meta())
         assert app.quality_view.resolutions == []
-
-
-class TestCallbacksMarshaling:
-    def test_on_metadata_fetched_marshals(self, monkeypatch):
-        app, _ = _make_app()
-        called = []
-        monkeypatch.setattr(app, "_run_ui_thread", lambda handler, *a: called.append((handler, a)))
-        app._on_metadata_fetched("meta")
-        assert called == [(app._apply_meta, ("meta",))]
-
-    def test_on_download_finished_marshals(self, monkeypatch):
-        app, _ = _make_app()
-        called = []
-        monkeypatch.setattr(app, "_run_ui_thread", lambda handler, *a: called.append((handler, a)))
-        app._on_download_finished("j1", True, "Úspěch")
-        assert called == [(app._apply_finish, (True, "Úspěch"))]

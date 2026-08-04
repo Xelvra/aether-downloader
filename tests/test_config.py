@@ -270,12 +270,6 @@ class TestAppConfigCoercion:
         assert _coerce_bool(1) is True
         assert _coerce_bool(0) is False
 
-    def test_coerce_bool_random_string_false(self):
-        from stahovac.config.app_config import _coerce_bool
-
-        assert _coerce_bool("random") is False
-        assert _coerce_bool(None) is False
-
     def test_coerce_crf_out_of_range(self):
         from stahovac.config.app_config import coerce_crf
 

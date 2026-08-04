@@ -21,16 +21,10 @@ def _is_wine() -> bool:
 
 
 def _wine_to_unix(path: str) -> str:
-    """Převede Windows cestu (``C:\\…``, ``Z:\\…``) na Unix cestu pro Wine.
+    """Převede Windows cestu (``Z:\\…``) na Unix cestu pro Wine.
 
-    ``Z:\\`` ukazuje na Linuxový root (``/``); ostatní disky na
-    ``$WINEPREFIX/dosdevices/<disk>:/``. Prefix se bere z proměnné prostředí
-    ``WINEPREFIX`` (hostitelská cesta) – když není k dispozici, vrátí se cesta
-    beze změny, ať se otevírač nesnaží o nesmyslný UnixPath. Nativní cesty se
-    vrátí beze změny.
-
-    Pozor: pod Wine je ``pathlib.Path`` typu ``WindowsPath``, proto se cesta
-    staví jen z řetězců, ne přes ``Path()``.
+    Pod Wine je ``Z:\\`` ukazatel na Linuxový root (``/``) – stačí ho nahradit
+    a převést zpětná lomítka. Jiné disky/„native" cesty se vrátí beze změny.
     """
     p = str(path).replace("/", "\\")
     if len(p) >= 2 and p[1] == ":":
@@ -38,9 +32,6 @@ def _wine_to_unix(path: str) -> str:
         tail = p[2:].lstrip("\\").replace("\\", "/")
         if drive == "z":
             return "/" + tail
-        prefix = os.environ.get("WINEPREFIX")
-        if prefix and ":" not in prefix:
-            return f"{prefix.rstrip('/')}/dosdevices/{drive}:/{tail}"
     return str(path)
 
 
@@ -90,30 +81,15 @@ def _open_linux(path: str) -> tuple[bool, str]:
     return False, last
 
 
-_WINE_UNIX_OPENERS: tuple[str, ...] = (
-    "/usr/bin/xdg-open",
-    "/usr/bin/gio",
-    "/usr/bin/kde-open5",
-    "/usr/bin/kde-open",
-    "/usr/bin/exo-open",
-)
-
-
 def _open_linux_wine(unix_path: str) -> tuple[bool, str]:
     """Spustí Linux výchozí aplikaci pod Wine přes ``start /unix``.
 
     Wine nedokáže spouštět nativní Linux binárky přímo přes ``subprocess``
     (CreateProcess je odmítne), ale vestavěný ``start.exe /unix <bin> <args>``
-    Unix proces na hostitelském systému spolehlivě spustí.
+    Unix proces na hostitelském systému spolehlivě spustí. ``xdg-open`` je na
+    běžných Linux desktopách univerzální.
     """
-    last = "Pro tento typ souboru není nastaven žádný program."
-    for opener in _WINE_UNIX_OPENERS:
-        cmd = ["start", "/unix", opener, *(["open"] if "gio" in opener else []), unix_path]
-        ok, msg = _run(cmd)
-        if ok:
-            return True, ""
-        last = msg or last
-    return False, last
+    return _run(["start", "/unix", "/usr/bin/xdg-open", unix_path])
 
 
 def open_path(path_str: str) -> tuple[bool, str]:
@@ -174,26 +150,12 @@ def _reveal_linux(path: str) -> tuple[bool, str]:
     return _open_linux(str(Path(path).parent))
 
 
-_WINE_UNIX_REVEAL: tuple[tuple[str, ...], ...] = (
-    ("/usr/bin/nautilus", "--select"),
-    ("/usr/bin/dolphin", "--select"),
-    ("/usr/bin/nemo", "--select"),
-    ("/usr/bin/thunar",),
-    ("/usr/bin/pcmanfm", "--select"),
-)
-
-
 def _reveal_linux_wine(unix_path: str) -> tuple[bool, str]:
-    """Pod Wine vybere soubor v Linux správci souborů (přes ``start /unix``)."""
-    last = "Nepodařilo se otevřít správce souborů."
-    for args in _WINE_UNIX_REVEAL:
-        cmd = ["start", "/unix", *args, unix_path]
-        ok, msg = _run(cmd)
-        if ok:
-            return True, ""
-        if msg.startswith("Příkaz nenalezen"):
-            continue
-        last = msg or last
+    """Pod Wine otevře rodičovskou složku souboru (výchozí Linux správce).
+
+    Volba konkrétního správce by znamenala zkoušet binárky každého desktopu;
+    pod Wine (testovací prostředí) stačí otevřít složku přes ``xdg-open``.
+    """
     parent = unix_path.rsplit("/", 1)[0] if "/" in unix_path else unix_path
     return _open_linux_wine(parent)
 

@@ -1,4 +1,3 @@
-import flet as ft
 import pytest
 
 import stahovac.gui.help_view as hv
@@ -23,12 +22,3 @@ class TestContentChildren:
         monkeypatch.setattr(hv, "HELP_SECTIONS", [object()])
         with pytest.raises(AssertionError):
             hv._content_children()
-
-
-class TestBuildHelpContent:
-    def test_returns_container_with_close_button(self):
-        result = hv.build_help_content(dismiss_callback=lambda: None)
-        assert isinstance(result, ft.Container)
-        stack = result.content
-        assert isinstance(stack, ft.Stack)
-        assert len(stack.controls) == 2  # scrollovatelný obsah + zavírací tlačítko

@@ -7,7 +7,8 @@
 - Testy GUI: `tests/test_gui_quality_view.py` a `tests/test_gui_download_view.py` – unit testy event handlerů a změn props (toggle času/reencode, end-option, `update_qualities`, debounce, `refresh_metadata`, `update_metadata_ui`, `set_downloading`).
 - Testy GUI: `tests/test_gui_logs_view.py`, `tests/test_gui_storage_view.py`, `tests/test_gui_help_view.py` – render historie, otevírání souborů/složek (úspěch i chyba → notify), `_picker_mode`, pickery s debounce, stav FFmpeg, cookies, vykreslení nápovědy.
 - Testy GUI: `tests/test_gui_app.py` – zbylé metody `GuiApp` (resize/breakpointy, Safari blokace, `_start_download_impl`, `_do_start_download`, `_on_save_settings`, cap logů 500, throttling progress/status, `_force_unlock_ui`, tab switching, help/drawer, `_apply_*` marshaling).
-- Testy: pokrytí negui vrstvy do **100 %** – edge cases `AppState.update_config_from_ui`, `_coerce_bool`, `_bundled_ffmpeg_path`, `_looks_like_archive` (OSError), Wine správce souborů (`continue`/fallback), stream handler v `configure_logging`.
+- Testy: pokrytí negui vrstvy rozšířeno o edge cases `AppState.update_config_from_ui`.
+- Testy: odstraněn overengineering – „coverage theater" testy triviálních/nedostupných větví (`_bundled_ffmpeg_path` se simulovaným frozen, OSError větev `_looks_like_archive`, `_coerce_bool(None)`, stream handler v `configure_logging`, Wine `continue`/file-manager chain) a testy čistých delegací v `GuiApp`; zjednodušeny Wine otevírače (`xdg-open` + otevření rodičovské složky místo fallback řetězců) a `_wine_to_unix` (jen `Z:\` → `/`). CONTRIBUTING: strom projektu odpovídá realitě.
 - Testy: `TestDoStartDownload` mockuje `ffmpeg.find_ffmpeg` – testy jsou deterministické i v CI bez nainstalovaného FFmpeg.
 
 ### Změněno
