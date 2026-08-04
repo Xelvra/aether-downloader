@@ -1,5 +1,6 @@
 import asyncio
 import threading
+from pathlib import Path
 
 import flet as ft
 
@@ -385,7 +386,13 @@ class TestStartDownloadImpl:
 
 
 class TestDoStartDownload:
-    def test_manager_rejects_unlocks(self):
+    def _patch_no_auto_install(self, monkeypatch):
+        # Auto-instalace FFmpeg by volala controller.start() – testy ji mockují,
+        # aby byly nezávislé na tom, jestli má CI/system ffmpeg nainstalovaný.
+        monkeypatch.setattr(app_mod.ffmpeg, "find_ffmpeg", lambda: Path("/usr/bin/ffmpeg"))
+
+    def test_manager_rejects_unlocks(self, monkeypatch):
+        self._patch_no_auto_install(monkeypatch)
         app, statuses = _make_app()
         app._manager.start_result = False
         app._manager.started = None
@@ -395,7 +402,8 @@ class TestDoStartDownload:
         assert unlocked == [1]
         assert any("počkej" in t.lower() for t, _ in statuses)
 
-    def test_sets_downloading_state(self):
+    def test_sets_downloading_state(self, monkeypatch):
+        self._patch_no_auto_install(monkeypatch)
         app, statuses = _make_app()
         app.ffmpeg_install = _FfInstall()
         app._do_start_download(object())
