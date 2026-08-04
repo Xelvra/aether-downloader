@@ -7,6 +7,7 @@
 - Testy GUI: `tests/test_gui_quality_view.py` a `tests/test_gui_download_view.py` – unit testy event handlerů a změn props (toggle času/reencode, end-option, `update_qualities`, debounce, `refresh_metadata`, `update_metadata_ui`, `set_downloading`).
 - Testy GUI: `tests/test_gui_logs_view.py`, `tests/test_gui_storage_view.py`, `tests/test_gui_help_view.py` – render historie, otevírání souborů/složek (úspěch i chyba → notify), `_picker_mode`, pickery s debounce, stav FFmpeg, cookies, vykreslení nápovědy.
 - Testy GUI: `tests/test_gui_app.py` – zbylé metody `GuiApp` (resize/breakpointy, Safari blokace, `_start_download_impl`, `_do_start_download`, `_on_save_settings`, cap logů 500, throttling progress/status, `_force_unlock_ui`, tab switching, help/drawer, `_apply_*` marshaling).
+- Testy: pokrytí negui vrstvy do **100 %** – edge cases `AppState.update_config_from_ui`, `_coerce_bool`, `_bundled_ffmpeg_path`, `_looks_like_archive` (OSError), Wine správce souborů (`continue`/fallback), stream handler v `configure_logging`.
 
 ### Změněno
 - Dokumentace: FFmpeg se automaticky stahuje vždy, když v systému chybí – ne jen k ořezu/MP3, ale i ke spojení obrazu se zvukem (merge) při stahování MP4. Aktualizováno v README a nápovědě v aplikaci (`help_content.py`).

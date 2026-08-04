@@ -309,3 +309,15 @@ class TestRevealLinuxWine:
         ok, _ = sys_mod._reveal_linux_wine("/home/pc/v.mp4")
         assert ok is True
         assert calls[-1] == ["open", "/home/pc"]
+
+    def test_all_managers_and_openers_fail_reports_error(self, monkeypatch):
+        monkeypatch.setattr(sys_mod, "_run", lambda cmd, timeout=10: (False, "žádný program"))
+        ok, message = sys_mod._reveal_linux_wine("/home/pc/v.mp4")
+        assert ok is False
+        assert message
+
+    def test_missing_managers_are_skipped(self, monkeypatch):
+        monkeypatch.setattr(sys_mod, "_run", lambda cmd, timeout=10: (False, f"Příkaz nenalezen: {cmd[2]}"))
+        monkeypatch.setattr(sys_mod, "_open_linux_wine", lambda p: (True, ""))
+        ok, _ = sys_mod._reveal_linux_wine("/home/pc/v.mp4")
+        assert ok is True

@@ -741,6 +741,20 @@ class TestLooksLikeArchive:
         f.write_bytes(b"anything")
         assert _looks_like_archive(f) is True
 
+    def test_unreadable_path_returns_false(self, tmp_path):
+        assert _looks_like_archive(tmp_path / "missing.zip") is False
+
+
+class TestBundledFfmpegPath:
+    def test_returns_none_when_no_meipass(self, monkeypatch):
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+        assert ffmpeg_mod._bundled_ffmpeg_path() is None
+
+    def test_returns_none_when_not_frozen(self, monkeypatch):
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        assert ffmpeg_mod._bundled_ffmpeg_path() is None
+
 
 class TestVerifySha256:
     def test_matches(self, tmp_path):
