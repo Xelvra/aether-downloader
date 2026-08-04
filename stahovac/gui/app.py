@@ -10,7 +10,6 @@ from stahovac.config.app_config import coerce_crf
 from stahovac.config.constants import (
     APP_TITLE,
     COOKIES_FILE_OPTION,
-    FORMAT_MP4,
     VERSION_DISPLAY,
     CookieSource,
 )
@@ -686,8 +685,7 @@ class GuiApp:
         self._last_log_update = time.time()
         self._last_progress_update = time.time()
         self._safe_page_update()
-        needs_ffmpeg = not params.whole_video or params.format_choice != FORMAT_MP4
-        if needs_ffmpeg and ffmpeg.find_ffmpeg() is None:
+        if ffmpeg.find_ffmpeg() is None:
             self._start_ffmpeg_install(auto=True)
         started = self._manager.start_download(params)
         if not started:

@@ -78,14 +78,15 @@ class TestAutoFfmpegInstall:
         assert started == [True]
         assert app._manager.started == [params]
 
-    def test_auto_install_skipped_for_whole_video_mp4(self, monkeypatch):
+    def test_auto_install_triggered_for_whole_video_mp4(self, monkeypatch):
+        """Merge video+audio (bestvideo+bestaudio) vyžaduje FFmpeg i bez ořezu."""
         app = _make_app()
         started = []
         monkeypatch.setattr("stahovac.gui.app.ffmpeg.find_ffmpeg", lambda: None)
         app._start_ffmpeg_install = lambda auto=False: started.append(auto)
         params = DownloadParams(url="https://x", whole_video=True)
         app._do_start_download(params)
-        assert started == []
+        assert started == [True]
         assert app._manager.started == [params]
 
     def test_auto_install_skipped_when_ffmpeg_present(self, monkeypatch):

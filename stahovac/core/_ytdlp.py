@@ -10,7 +10,7 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
-from stahovac.config.constants import FORMAT_MP4, QUALITY_BEST, MediaFormat
+from stahovac.config.constants import QUALITY_BEST, MediaFormat
 from stahovac.core.metadata import YtdlLogger
 from stahovac.models import DownloadParams
 from stahovac.platforms import platform_opts
@@ -19,17 +19,19 @@ from stahovac.utils.format import format_eta as _format_eta
 from stahovac.utils.format import format_speed as _format_speed
 
 
-def _ensure_ffmpeg_ready(params: DownloadParams) -> None:
+def _ensure_ffmpeg_ready() -> None:
     """Počká, až bude FFmpeg k dispozici, když ho úloha vyžaduje.
 
-    GUI spouští instalaci FFmpeg na pozadí (auto-install). Tady jen počkáme
-    na její dokončení, aby yt-dlp (merge formátů, MP3, titulky) i ořez měly
-    FFmpeg k dispozici; hlavní vlákno UI se nikdy neblokuje. Když se žádná
-    instalace nespouští, vrátí se okamžitě a zachová se stávající chování.
+    GUI spouští instalaci FFmpeg na pozadí (auto-install). Tady počkáme na
+    její dokončení, aby yt-dlp (merge video+audio, MP3, titulky) i ořez měly
+    FFmpeg k dispozici; hlavní vlákno UI se nikdy neblokuje. Když žádná
+    instalace neběží a FFmpeg už je/není k dispozici, `wait_until_ready()`
+    se vrátí okamžitě.
+
+    Musí se zavolat PŘED sestavením yt-dlp opcí (`_build_ydl_opts`) – jen tak
+    je `ffmpeg_location` platný, i když se FFmpeg stahuje na pozadí.
     """
-    needs_ffmpeg = not params.whole_video or params.format_choice != FORMAT_MP4
-    if needs_ffmpeg:
-        dl_mod.wait_until_ready()
+    dl_mod.wait_until_ready()
 
 
 def _build_ydl_opts(

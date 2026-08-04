@@ -151,6 +151,10 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
                 self._finish_cancelled(job_id)
                 return
 
+            self._set_state(DownloadState.DOWNLOADING)
+            # Počkáme na auto-instalaci FFmpeg PŘED sestavením opts – jen tak
+            # `_build_ydl_opts` nastaví platný ffmpeg_location (merge/MP3/ořez).
+            _ensure_ffmpeg_ready()
             opts = _build_ydl_opts(params, self._config, lambda d: self._progress_hook(job_id, d))
             opts["outtmpl"] = str(job_dir / "%(title)s.%(ext)s")
             opts["overwrites"] = False
@@ -158,9 +162,6 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
             opts["_job_id"] = job_id
             opts["_job_dir"] = str(job_dir)
             opts["_cancel_check"] = self._cancel_event.is_set
-
-            self._set_state(DownloadState.DOWNLOADING)
-            _ensure_ffmpeg_ready(params)
             ranged_path: Path | None = None
             ok = False
             if not params.whole_video and params.format_choice == FORMAT_MP4 and _can_ranged_hls(url):
@@ -189,7 +190,7 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
                         return
                     elif found and not params.whole_video and not is_subs_dl:
                         self._set_state(DownloadState.PROCESSING)
-                        _ensure_ffmpeg_ready(params)
+                        _ensure_ffmpeg_ready()
                         self.on_status(job_id, "Ořezávám video…", "orange")
                         trimmed = self._cut_with_ffmpeg(
                             found,

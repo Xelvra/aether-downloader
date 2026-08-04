@@ -9,6 +9,7 @@
 - Ctrl+C / shutdown aplikace (Termux, web režim): `main()` už nespolkne `CancelledError` – flet-web tak po zrušení session nevolá `after_event()` na zrušenou (None) session a při ukončení se nevypíše traceback `AttributeError: 'NoneType' object has no attribute 'after_event'`.
 - CONTRIBUTING: opraveno časování nouzového odemykání UI – `180 s / +30 s / +30 s` → `8 s / +8 s` (soulad se skutečnými hodnotami v `gui/app.py`).
 - Auto-instalace FFmpeg (Windows bez FFmpeg, ořez/MP3): `FfmpegInstallController` přistupoval k host atributům přes veřejné názvy, ale `GuiApp` je má privátní – padalo `AttributeError: 'GuiApp' object has no attribute 'progress_bar'` a stahování (např. Twitch) se nespustilo. Oprava + regresní test reálného zapojení GuiApp → controller.
+- Auto-instalace FFmpeg při prvním použití: yt-dlp potřebuje FFmpeg nejen na ořez/MP3, ale i na **merge video+audio** (`bestvideo+bestaudio`) při běžném stahování MP4. Auto-instalace se teď spustí vždy, když FFmpeg chybí, a worker počká na instalaci **před** sestavením yt-dlp opcí – jinak yt-dlp čerstvě staženou binárku nenašel a stahování spadlo na „ffmpeg is not installed". Regresní test pořadí `_ensure_ffmpeg_ready` → `_build_ydl_opts`.
 
 ### Změněno
 - CI: OSV-Scanner pin na `v2.3.8` (major tag `v2` neexistuje).

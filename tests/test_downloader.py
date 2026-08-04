@@ -77,20 +77,56 @@ class TestEnsureFfmpegReady:
     def test_waits_when_trim_needed(self, monkeypatch):
         calls = []
         monkeypatch.setattr(dl_mod, "wait_until_ready", lambda: calls.append("wait"))
-        _ensure_ffmpeg_ready(_params(whole_video=False))
+        _ensure_ffmpeg_ready()
         assert calls == ["wait"]
 
     def test_waits_when_mp3(self, monkeypatch):
         calls = []
         monkeypatch.setattr(dl_mod, "wait_until_ready", lambda: calls.append("wait"))
-        _ensure_ffmpeg_ready(_params(format_choice=MediaFormat.MP3.value))
+        _ensure_ffmpeg_ready()
         assert calls == ["wait"]
 
-    def test_skips_whole_video_mp4(self, monkeypatch):
+    def test_waits_for_whole_video_mp4(self, monkeypatch):
+        """Merge video+audio (bestvideo+bestaudio) vyžaduje FFmpeg i bez ořezu."""
         calls = []
         monkeypatch.setattr(dl_mod, "wait_until_ready", lambda: calls.append("wait"))
-        _ensure_ffmpeg_ready(_params())
-        assert calls == []
+        _ensure_ffmpeg_ready()
+        assert calls == ["wait"]
+
+
+class TestWorkerFfmpegOrdering:
+    def test_opts_built_after_ffmpeg_becomes_ready(self, monkeypatch, tmp_path):
+        """Regrese: `_build_ydl_opts` se musí volat AŽ PO čekání na FFmpeg.
+
+        Když se FFmpeg stahuje na pozadí (auto-install), musí `ffmpeg_location`
+        ukazovat na čerstvě nainstalovanou binárku. Kdyby se opts stavěly před
+        čekáním, yt-dlp by FFmpeg nenašel (chyba "ffmpeg is not installed").
+        """
+        state = {"ready": False}
+
+        def fake_find():
+            return Path("/opt/ffmpeg/bin/ffmpeg") if state["ready"] else None
+
+        monkeypatch.setattr(dl_mod, "find_ffmpeg", fake_find)
+        monkeypatch.setattr(dl_mod, "wait_until_ready", lambda: state.__setitem__("ready", True))
+
+        captured = {}
+
+        def fake_build_opts(params, config, hook):
+            captured["found"] = fake_find() is not None
+            return {
+                "_job_id": "j1",
+                "_job_dir": str(tmp_path / ".jobs" / "j1"),
+                "outtmpl": str(tmp_path / "x.%(ext)s"),
+            }
+
+        monkeypatch.setattr(dl_mod, "_build_ydl_opts", fake_build_opts)
+
+        dl = Downloader({})
+        dl._get_title = lambda url: "T"
+        dl._download_with_ytdlp = lambda url, opts, job_id: True
+        dl._download_worker(_params(whole_video=True, output_folder=str(tmp_path)), "j1")
+        assert captured["found"] is True
 
 
 class TestBuildYdlOpts:
