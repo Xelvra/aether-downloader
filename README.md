@@ -213,7 +213,7 @@ Přehled změn v jednotlivých verzích najdeš v [CHANGELOG.md](CHANGELOG.md).
 
 ## Pro vývojáře
 
-Chceš aplikaci spustit ze zdrojového kódu, upravovat ji nebo si sestavit vlastní binárku? Postup najdeš v [CONTRIBUTING.md](CONTRIBUTING.md).
+Chceš aplikaci spustit ze zdrojového kódu, upravovat ji nebo si sestavit vlastní binárku? Postup najdeš v [CONTRIBUTING.md](CONTRIBUTING.md). Plánované funkce a architektonické změny k diskusi jsou v [ROADMAP.md](ROADMAP.md).
 
 ---
 
