@@ -121,8 +121,9 @@ HELP_SECTIONS: tuple[HelpText | HelpCode | HelpQA, ...] = (
     HelpText(
         "Instalace FFmpeg",
         (
-            "FFmpeg je malý program, který aplikace potřebuje pro ořez videa a převod na MP3.",
-            "Když ho poprvé využiješ (ořez nebo MP3), aplikace si ho stáhne a nainstaluje sama – "
+            "FFmpeg je malý program, který aplikace potřebuje pro ořez videa, převod na MP3, "
+            "titulky a spojení obrazu se zvukem (merge) při stahování MP4.",
+            "Když FFmpeg v systému chybí, aplikace si ho při prvním stahování stáhne a nainstaluje sama – "
             "průběh uvidíš jako u běžného stahování. Nic dalšího nastavovat nemusíš.",
             "Stav FFmpeg a případné ruční stažení nebo přeinstalaci najdeš na kartě Nastavení.",
             "Chceš-li ho nainstalovat raději ručně, použij jeden z příkazů podle svého systému:",

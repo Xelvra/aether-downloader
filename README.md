@@ -32,7 +32,7 @@
 ## Rychlý start (3 kroky)
 
 1. Stáhni si aplikaci pro svůj počítač ze sekce [Releases](https://github.com/Xelvra/aether-downloader/releases).
-2. Spusť aplikaci, vlož odkaz na video a klikni na **Stáhnout**. K ořezu a MP3 je potřeba **FFmpeg** — na macOS je už součástí aplikace, na Windows/Linuxu si ho aplikace sama stáhne při prvním použití.
+2. Spusť aplikaci, vlož odkaz na video a klikni na **Stáhnout**. K ořezu, MP3 i ke spojení obrazu se zvukem je potřeba **FFmpeg** — na macOS je už součástí aplikace, na Windows/Linuxu si ho aplikace sama stáhne při prvním použití.
 3. Hotovo — video je tvoje.
 
 Podrobný postup pro konkrétní systém najdeš níže (Android viz [zde](#-android-pro-pokročilejší-uživatele)).
@@ -57,7 +57,7 @@ Podrobný postup pro konkrétní systém najdeš níže (Android viz [zde](#-and
 2. Soubor se nemusí rozbalovat — stačí na něj poklepat.
 3. Windows pravděpodobně zobrazí modrou obrazovku s varováním — to je normální, protože aplikace nemá placený certifikát od Microsoftu. Klikni na **Další informace** → **Přesto spustit**.
 
-> ⚠️ K ořezu a MP3 si aplikace **FFmpeg** při prvním použití stáhne sama (viz [FFmpeg](#ffmpeg-instaluje-se-automaticky)).
+> ⚠️ Pokud **FFmpeg** v systému chybí, aplikace si ho při prvním použití stáhne sama (viz [FFmpeg](#ffmpeg-instaluje-se-automaticky)).
 
 ### 🐧 Linux
 
@@ -74,7 +74,7 @@ Podrobný postup pro konkrétní systém najdeš níže (Android viz [zde](#-and
    ```
 3. Poklepej na soubor `stahovac-linux-x86_64` a aplikace se spustí.
 
-> ⚠️ K ořezu a MP3 si aplikace **FFmpeg** při prvním použití stáhne sama (viz [FFmpeg](#ffmpeg-instaluje-se-automaticky)).
+> ⚠️ Pokud **FFmpeg** v systému chybí, aplikace si ho při prvním použití stáhne sama (viz [FFmpeg](#ffmpeg-instaluje-se-automaticky)).
 
 ### 🍎 macOS
 
@@ -121,10 +121,10 @@ Termux vypíše webovou adresu — otevři ji v prohlížeči telefonu. Podrobno
 
 ## FFmpeg (instaluje se automaticky)
 
-Aplikace potřebuje **FFmpeg** k ořezu videa nebo převodu na MP3.
+Aplikace potřebuje **FFmpeg** k ořezu videa, převodu na MP3, stažení titulků a ke spojení obrazu se zvukem (merge) při stahování MP4.
 
 - **macOS** — FFmpeg je **přibalený přímo v aplikaci**, nic se nestahuje ani nenastavuje.
-- **Windows a Linux** — k ořezu nebo MP3 si aplikace **FFmpeg sama stáhne a nainstaluje** při prvním použití (průběh uvidíš jako u běžného stahování). Stav FFmpeg a případné ruční stažení/přeinstalaci najdeš v aplikaci na kartě **Nastavení**.
+- **Windows a Linux** — když FFmpeg v systému chybí, aplikace si ho **sama stáhne a nainstaluje** při prvním stahování (potřeba je nejen k ořezu/MP3, ale i ke spojení obrazu se zvukem). Průběh uvidíš jako u běžného stahování. Stav FFmpeg a případné ruční stažení/přeinstalaci najdeš v aplikaci na kartě **Nastavení**.
 
 Pro ruční instalaci zkopíruj příkaz podle svého systému do terminálu (Windows: PowerShell, macOS/Linux: Terminál):
 
@@ -165,7 +165,7 @@ Stahování lze kdykoliv zrušit tlačítkem **Zrušit**.
 | Zrušení stahování | Jedním kliknutím stahování kdykoliv zastavíš |
 | Výběr složky | Sám si zvolíš, kam se má video uložit |
 | Kick a Twitch | Vyžaduje jednorázové nastavení cookies v Nastavení (návod v nápovědě) |
-| Automatické stažení FFmpeg | Na Windows/Linuxu si aplikace FFmpeg sama stáhne a nainstaluje při prvním použití (na macOS je přibalený) |
+| Automatické stažení FFmpeg | Na Windows/Linuxu si aplikace FFmpeg sama stáhne a nainstaluje, když v systému chybí (na macOS je přibalený) |
 | Ukládání nastavení | Vše se ukládá automaticky, není potřeba nic potvrzovat |
 
 ---

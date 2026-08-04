@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Změněno
+- Dokumentace: FFmpeg se automaticky stahuje vždy, když v systému chybí – ne jen k ořezu/MP3, ale i ke spojení obrazu se zvukem (merge) při stahování MP4. Aktualizováno v README a nápovědě v aplikaci (`help_content.py`).
+
 ## [1.3.5] – 2026-08-04
 
 ### Opraveno
