@@ -177,9 +177,9 @@ Klíčové vlastnosti:
 
   | Čas od zrušení | Akce |
   |---|---|
-  | 180 s | žádost o zrušení |
-  | +30 s | `force_stop()` ukončí child procesy |
-  | +30 s | poslední záchrana odemkne UI |
+  | 8 s | žádost o zrušení |
+  | +8 s | `force_stop()` ukončí child procesy |
+  | +8 s | poslední záchrana odemkne UI |
 
   UI tedy neodemkne dřív, než skončí worker, pokud to není vyloženě nezbytné.
 - Worker stahuje do izolovaného adresáře `<output_folder>/.jobs/<job_id>/`; po dokončení se soubory atomicky přesunou (`os.replace`) do cíle a job adresář se vždy smaže (i velké neúplné soubory).
