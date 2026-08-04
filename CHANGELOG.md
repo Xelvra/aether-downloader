@@ -11,6 +11,7 @@
 - CI: OSV-Scanner pin na `v2.3.8` (major tag `v2` neexistuje).
 - README: správné pořadí v Obsahu (Ukázky až za Rychlý start).
 - Dokumentace: Android (Termux) – do `pkg install` přidáno `git` (v Termuxu není předinstalovaný), `rust`, `binutils` a `clang` (kompilace balíčků bez Android kola); instalace bez dev balíčků `uv sync` – Playwright a PyInstaller nemají binárky pro Android, pro vývoj se vynechávají přes `--no-install-package`.
+- Refactoring (nálezy auditu): `StorageView._picker_mode` inicializováno v `__init__`; `_notify()` sjednoceno do sdílené `theme.notify()`; CRF coerce má jediný zdroj pravdy `coerce_crf()` v `config/app_config.py` (Downloader/GuiApp jen delegují); metadata cache používá sdílený eviction helper a `_add_to_cache` je dokumentovaný testovací seed helper.
 
 ## [1.3.4] – 2026-08-03
 

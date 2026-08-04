@@ -125,6 +125,13 @@ class MetadataService:
             info = ydl.extract_info(url, download=False)
         return info or None
 
+    def _evict_if_needed(self) -> None:
+        """Po překročení `cache_max` vyhodí nejstarší vložené položky (FIFO)."""
+        while len(self._cache) > self._cache_max:
+            del self._cache[next(iter(self._cache))]
+        while len(self._info_cache) > self._cache_max:
+            del self._info_cache[next(iter(self._info_cache))]
+
     def _store_info(self, url: str, info: dict) -> None:
         with self._cache_lock:
             self._info_cache[url] = info
@@ -136,16 +143,14 @@ class MetadataService:
             )
             video.available_resolutions = heights
             self._cache[url] = video
-            if len(self._info_cache) > self._cache_max:
-                oldest = next(iter(self._info_cache))
-                del self._info_cache[oldest]
-            if len(self._cache) > self._cache_max:
-                oldest = next(iter(self._cache))
-                del self._cache[oldest]
+            self._evict_if_needed()
 
     def _add_to_cache(self, url: str, data: VideoMetadata) -> None:
+        """Testovací seed helper – naplní cache přímo bez network volání.
+
+        Produkční cesta jde přes `_store_info` (přes `fetch_info`/`fetch`).
+        Tuto metodu volají jen testy, aby do cache nahrály data bez yt-dlp.
+        """
         with self._cache_lock:
-            if len(self._cache) >= self._cache_max:
-                oldest = next(iter(self._cache))
-                del self._cache[oldest]
             self._cache[url] = data
+            self._evict_if_needed()

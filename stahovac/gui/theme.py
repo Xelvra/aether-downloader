@@ -70,3 +70,11 @@ def action_button(icon, text, color, on_click):
         expand=True,
         on_click=on_click,
     )
+
+
+def notify(page, message: str) -> None:
+    """Zobrazí SnackBar s hláškou (sdílený helper napříč view)."""
+    snackbar = ft.SnackBar(content=ft.Text(message), open=True)
+    page.overlay.append(snackbar)
+    snackbar.on_dismiss = lambda e: page.overlay.remove(snackbar) if snackbar in page.overlay else None
+    page.update()

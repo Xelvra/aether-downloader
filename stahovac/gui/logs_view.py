@@ -157,15 +157,9 @@ class LogsView:
     def _open_history_item(self, file_path: str) -> None:
         ok, message = open_path(file_path)
         if not ok:
-            self._notify(message)
+            th.notify(self._page, message)
 
     def _reveal_history_item(self, file_path: str) -> None:
         ok, message = reveal_in_file_manager(file_path)
         if not ok:
-            self._notify(message)
-
-    def _notify(self, message: str) -> None:
-        snackbar = ft.SnackBar(content=ft.Text(message), open=True)
-        self._page.overlay.append(snackbar)
-        snackbar.on_dismiss = lambda e: self._page.overlay.remove(snackbar) if snackbar in self._page.overlay else None
-        self._page.update()
+            th.notify(self._page, message)

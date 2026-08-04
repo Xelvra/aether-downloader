@@ -114,7 +114,7 @@ class AppConfig:
             cookies_source=cookies_source,
             cookies_file_path=cookies_file,
             re_encode=_coerce_bool(data.get("re_encode")),
-            crf=_coerce_crf(data.get("crf")),
+            crf=coerce_crf(data.get("crf")),
             preset=preset,
             schema_version=int(data.get("schema_version", 1)),
         )
@@ -132,7 +132,7 @@ class AppConfig:
         return str(get_base_dir() / DOWNLOADS_DIR_NAME)
 
     def __post_init__(self) -> None:
-        self.crf = _coerce_crf(self.crf)
+        self.crf = coerce_crf(self.crf)
         self.re_encode = _coerce_bool(self.re_encode)
         if not isinstance(self.preset, str) or self.preset not in PRESETS:
             self.preset = "fast"
@@ -158,7 +158,7 @@ def _coerce_bool(value: Any) -> bool:
     return False
 
 
-def _coerce_crf(value: Any) -> int:
+def coerce_crf(value: Any) -> int:
     try:
         crf = int(value)
     except (TypeError, ValueError):

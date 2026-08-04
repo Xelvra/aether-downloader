@@ -6,6 +6,7 @@ import traceback
 import flet as ft
 
 import stahovac.gui.theme as th
+from stahovac.config.app_config import coerce_crf
 from stahovac.config.constants import (
     APP_TITLE,
     COOKIES_FILE_OPTION,
@@ -740,11 +741,7 @@ class GuiApp:
 
     @staticmethod
     def _parse_crf(value: str) -> int:
-        try:
-            crf = int(value)
-        except (TypeError, ValueError):
-            return 23
-        return crf if 0 <= crf <= 51 else 23
+        return coerce_crf(value)
 
     def _safari_cookies_blocking(self, url: str) -> bool:
         """Zablokuje stahování, když Safari cookies nejdou načíst a platforma

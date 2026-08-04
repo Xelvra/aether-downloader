@@ -15,6 +15,7 @@ from typing import Any
 
 import yt_dlp
 
+from stahovac.config.app_config import coerce_crf
 from stahovac.config.constants import END_OPTION_FULL, FORMAT_MP4, QUALITY_BEST, MediaFormat
 from stahovac.core.ffmpeg import find_ffmpeg, wait_until_ready
 from stahovac.core.metadata import MetadataService, YtdlLogger
@@ -684,11 +685,7 @@ class Downloader:
 
     @staticmethod
     def _safe_crf(value: object) -> int:
-        try:
-            crf = int(value)  # type: ignore[call-overload]
-        except (TypeError, ValueError):
-            return 23
-        return crf if 0 <= crf <= 51 else 23
+        return coerce_crf(value)
 
     @staticmethod
     def _platform_opts(url: str) -> dict:

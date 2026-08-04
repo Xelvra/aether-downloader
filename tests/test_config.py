@@ -271,7 +271,7 @@ class TestAppConfigCoercion:
         assert _coerce_bool(0) is False
 
     def test_coerce_crf_out_of_range(self):
-        from stahovac.config.app_config import _coerce_crf
+        from stahovac.config.app_config import coerce_crf
 
-        assert _coerce_crf(100) == 23
-        assert _coerce_crf(-5) == 23
+        assert coerce_crf(100) == 23
+        assert coerce_crf(-5) == 23

@@ -32,6 +32,7 @@ class StorageView:
         self._on_ffmpeg_install = on_ffmpeg_install
         self._last_dialog_time = 0.0
         self._initialized = False
+        self._picker_mode: str = "folder"
 
         self._file_picker = CustomFilePicker(page, on_result=self._on_picker_result)
 
@@ -120,13 +121,7 @@ class StorageView:
     def _open_output_folder(self, e=None):
         ok, message = open_path(self.output_folder_text.value)
         if not ok:
-            self._notify(message)
-
-    def _notify(self, message: str) -> None:
-        snackbar = ft.SnackBar(content=ft.Text(message), open=True)
-        self._page.overlay.append(snackbar)
-        snackbar.on_dismiss = lambda e: self._page.overlay.remove(snackbar) if snackbar in self._page.overlay else None
-        self._page.update()
+            th.notify(self._page, message)
 
     def build(self):
         compact = th.SCREEN_WIDTH < BREAKPOINT_COMPACT
