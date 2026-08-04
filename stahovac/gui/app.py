@@ -15,7 +15,6 @@ from stahovac.config.constants import (
     CookieSource,
 )
 from stahovac.core import ffmpeg
-from stahovac.core.validator import is_valid_url, validate_crf, validate_time_range
 from stahovac.downloader import DownloadManager
 from stahovac.gui.download_view import DownloadView
 from stahovac.gui.help_view import build_help_content
@@ -701,29 +700,9 @@ class GuiApp:
             self.on_status("Neplatná URL: Zadej odkaz na video.", COLOR_WARN)
             self._force_unlock_ui()
             return
-        if not is_valid_url(url):
-            self.on_status("Neplatná URL: Zadej platný odkaz na video.", COLOR_WARN)
-            self._force_unlock_ui()
-            return
         if self._safari_cookies_blocking(url):
             return
         quality_params = self.quality_view.to_params()
-        if not quality_params["whole_video"]:
-            error = validate_time_range(
-                quality_params["start_time"],
-                quality_params["end_time"],
-                quality_params["end_option"],
-            )
-            if error:
-                self.on_status(error, COLOR_WARN)
-                self._force_unlock_ui()
-                return
-            if quality_params["re_encode"]:
-                crf_error = validate_crf(quality_params["crf"])
-                if crf_error:
-                    self.on_status(crf_error, COLOR_WARN)
-                    self._force_unlock_ui()
-                    return
         params = DownloadParams(
             url=url,
             quality=quality_params["quality"],
@@ -737,6 +716,11 @@ class GuiApp:
             crf=self._parse_crf(quality_params["crf"]),
             preset=quality_params["preset"],
         )
+        error = self._manager.validate(params, crf_raw=quality_params["crf"])
+        if error:
+            self.on_status(error, COLOR_WARN)
+            self._force_unlock_ui()
+            return
         self._do_start_download(params)
 
     @staticmethod

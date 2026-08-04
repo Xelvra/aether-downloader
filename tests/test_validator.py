@@ -4,8 +4,10 @@ from stahovac.core.validator import (
     normalize_time,
     pad_time,
     time_to_seconds,
+    validate_download_params,
     validate_time_range,
 )
+from stahovac.models import DownloadParams
 
 
 class TestProgressRegex:
@@ -112,3 +114,69 @@ class TestIsValidUrl:
 
     def test_no_netloc(self):
         assert is_valid_url("https://") is False
+
+
+class TestValidateDownloadParams:
+    def _params(self, **overrides):
+        data = {
+            "url": "https://www.youtube.com/watch?v=abc",
+            "whole_video": True,
+            "start_time": "00:00",
+            "end_time": "00:00",
+            "end_option": "Do konce videa",
+            "re_encode": False,
+            "crf": 23,
+        }
+        data.update(overrides)
+        return DownloadParams.from_dict(data)
+
+    def test_valid_whole_video(self):
+        assert validate_download_params(self._params()) is None
+
+    def test_invalid_url(self):
+        result = validate_download_params(self._params(url="not-a-url"))
+        assert result is not None
+        assert "URL" in result
+
+    def test_bad_time_range(self):
+        params = self._params(
+            whole_video=False,
+            start_time="00:10:00",
+            end_time="00:05:00",
+            end_option="Do určitého času",
+        )
+        result = validate_download_params(params)
+        assert result is not None
+        assert "Konec" in result
+
+    def test_bad_crf_raw_rejected_when_reencode(self):
+        params = self._params(whole_video=False, re_encode=True, crf=23)
+        result = validate_download_params(params, crf_raw="abc")
+        assert result is not None
+        assert "CRF" in result
+
+    def test_bad_crf_ignored_without_reencode(self):
+        params = self._params(whole_video=False, re_encode=False, crf=23)
+        assert validate_download_params(params, crf_raw="abc") is None
+
+    def test_bad_crf_ignored_for_whole_video(self):
+        params = self._params(whole_video=True, re_encode=True, crf=23)
+        assert validate_download_params(params, crf_raw="abc") is None
+
+    def test_valid_crf_with_reencode(self):
+        params = self._params(whole_video=False, re_encode=True, crf=20)
+        assert validate_download_params(params, crf_raw="20") is None
+
+    def test_out_of_range_crf_rejected_when_no_raw(self):
+        params = self._params(whole_video=False, re_encode=True, crf=100)
+        assert validate_download_params(params) is not None
+
+    def test_trim_end_before_start_without_reencode(self):
+        params = self._params(
+            whole_video=False,
+            start_time="00:10:00",
+            end_time="00:05:00",
+            end_option="Do určitého času",
+            re_encode=False,
+        )
+        assert validate_download_params(params) is not None

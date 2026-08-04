@@ -25,6 +25,25 @@ class TestDownloadManager:
         assert manager.active_job_id is None
         assert manager.downloader is not None
 
+    def test_validate_valid_request(self, tmp_path):
+        manager = self._make(tmp_path)
+        assert manager.validate(_params()) is None
+
+    def test_validate_rejects_bad_url(self, tmp_path):
+        manager = self._make(tmp_path)
+        error = manager.validate(_params(url="nonsense"))
+        assert error is not None
+        assert "URL" in error
+
+    def test_validate_passes_crf_raw(self, tmp_path):
+        manager = self._make(tmp_path)
+        error = manager.validate(
+            _params(whole_video=False, re_encode=True),
+            crf_raw="abc",
+        )
+        assert error is not None
+        assert "CRF" in error
+
     def test_start_download_sets_state(self, tmp_path):
         manager = self._make(tmp_path)
         started = []

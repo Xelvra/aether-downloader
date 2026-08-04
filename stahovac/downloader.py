@@ -4,6 +4,7 @@ from typing import Any
 
 from stahovac.config.manager import ConfigManager
 from stahovac.core.downloader import Downloader
+from stahovac.core.validator import validate_download_params
 from stahovac.models import DownloadParams, DownloadState
 from stahovac.state import AppState
 
@@ -60,6 +61,15 @@ class DownloadManager:
 
     def is_busy(self) -> bool:
         return self._downloader.is_busy()
+
+    def validate(self, params: DownloadParams, *, crf_raw: str | None = None) -> str | None:
+        """Ověří požadavek na stahování (URL, ořez, CRF) – viz core/validator.
+
+        Vrací uživatelsky srozumitelnou chybovou hlášku, nebo ``None``.
+        Volá se před ``start_download()`` z libovolného vstupního bodu
+        (GUI dnes, případně CLI později), takže validace nežije v GUI vrstvě.
+        """
+        return validate_download_params(params, crf_raw=crf_raw)
 
     def _is_active(self, job_id: str) -> bool:
         return not job_id or job_id == self._active_job_id

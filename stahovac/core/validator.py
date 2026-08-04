@@ -2,6 +2,7 @@ import re
 from urllib.parse import urlparse
 
 from stahovac.config.constants import END_OPTION_FULL
+from stahovac.models import DownloadParams
 
 RE_PROGRESS = re.compile(
     r"\[download\]\s+(?P<percent>\d+\.?\d*)%\s+of\s+.*?\s+at\s+(?P<speed>.+?)\s+ETA\s+(?P<eta>\S+)"
@@ -60,3 +61,23 @@ def is_valid_url(url: str) -> bool:
         return False
     parsed = urlparse(url.strip())
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def validate_download_params(params: DownloadParams, *, crf_raw: str | None = None) -> str | None:
+    """Ověří celý požadavek na stahování (URL, ořez, CRF).
+
+    Vrací uživatelsky srozumitelnou chybovou hlášku, nebo ``None``, když je
+    vše v pořádku. ``crf_raw`` je syrový text z formuláře – validuje se před
+    koercí (nečitelná hodnota se má odmítnout, ne tiše nahradit defaultem).
+    """
+    if not is_valid_url(params.url):
+        return "⚠️ Neplatná URL: Zadej platný odkaz na video."
+    if not params.whole_video:
+        error = validate_time_range(params.start_time, params.end_time, params.end_option)
+        if error:
+            return error
+        if params.re_encode:
+            crf_error = validate_crf(crf_raw if crf_raw is not None else str(params.crf))
+            if crf_error:
+                return crf_error
+    return None
