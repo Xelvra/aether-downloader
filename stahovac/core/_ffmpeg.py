@@ -169,9 +169,7 @@ class FfmpegTrimMixin:
         finally:
             dl_mod._untrack_process(proc)
 
-    def _run_ffmpeg(
-        self, proc: subprocess.Popen, estimated_secs: int | None, re_encode: bool, job_id: str
-    ) -> bool:
+    def _run_ffmpeg(self, proc: subprocess.Popen, estimated_secs: int | None, re_encode: bool, job_id: str) -> bool:
         """Spustí FFmpeg a sleduje průběh.
 
         Výstup se čte v samostatném vlákně, takže cyklus pravidelně

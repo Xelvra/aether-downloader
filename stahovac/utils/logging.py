@@ -41,8 +41,7 @@ def configure_logging(base_dir: Path) -> None:
 
         root = logging.getLogger()
         if not any(
-            isinstance(h, RotatingFileHandler) and getattr(h, "baseFilename", None) == str(path)
-            for h in root.handlers
+            isinstance(h, RotatingFileHandler) and getattr(h, "baseFilename", None) == str(path) for h in root.handlers
         ):
             file_handler = RotatingFileHandler(path, maxBytes=_MAX_BYTES, backupCount=_BACKUP_COUNT, encoding="utf-8")
             file_handler.setLevel(logging.DEBUG)

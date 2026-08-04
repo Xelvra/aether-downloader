@@ -5,9 +5,7 @@ from stahovac.utils.logging import configure_logging
 
 
 def _file_handlers(path: str) -> list[logging.Handler]:
-    return [
-        h for h in logging.getLogger().handlers if getattr(h, "baseFilename", None) == path
-    ]
+    return [h for h in logging.getLogger().handlers if getattr(h, "baseFilename", None) == path]
 
 
 def _cleanup(path: str) -> None:
