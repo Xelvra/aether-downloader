@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Přidáno
+- Dokumentace: `DEVELOPMENT_RULES.md` (pevná vývojová pravidla – Red-Green-Refactor, každý bug nese regresní test, gate před commitem, determinismus) a `tests/README.md` (konvence testů), odkazy z CONTRIBUTING.
+
 ### Změněno
 - Dokumentace: FFmpeg se automaticky stahuje vždy, když v systému chybí – ne jen k ořezu/MP3, ale i ke spojení obrazu se zvukem (merge) při stahování MP4. Aktualizováno v README a nápovědě v aplikaci (`help_content.py`).
 

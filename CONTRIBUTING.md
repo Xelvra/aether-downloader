@@ -156,6 +156,11 @@ uv run python main.py
 
 Před odesláním PR spusť aspoň `ruff check .` a `mypy stahovac/`.
 
+> 📏 **Pevná vývojová pravidla** (Red-Green-Refactor, každý bug nese regresní test,
+> gate před commitem, determinismus) najdeš v [DEVELOPMENT_RULES.md](DEVELOPMENT_RULES.md).
+> Konvence a organizace testů (1 soubor = 1 modul, jak psát UI testy) jsou
+> v [tests/README.md](tests/README.md).
+
 ---
 
 ## Životní cyklus stahování
