@@ -99,19 +99,21 @@ Podrobný postup pro konkrétní systém najdeš níže (Android viz [zde](#-and
 Pro Android neexistuje hotová aplikace ke stažení — spouští se přes Termux ze zdrojového kódu a otevírá se v prohlížeči.
 
 ```bash
-# 1. Nainstaluj potřebné nástroje
-pkg install ffmpeg python uv
+# 1. Nainstaluj potřebné nástroje (git v Termuxu není předinstalovaný)
+pkg install ffmpeg python git uv
 
 # 2. Stáhni si projekt
 git clone https://github.com/Xelvra/aether-downloader.git
 cd aether-downloader
-uv sync --extra dev
+uv sync
 
 # 3. Spusť aplikaci
 uv run python main.py
 ```
 
 Termux vypíše webovou adresu — otevři ji v prohlížeči telefonu. Podrobnosti najdeš v [CONTRIBUTING.md](CONTRIBUTING.md).
+
+> ℹ️ Na Androidu stačí běžné `uv sync` (jen běhové závislosti). Dev balíčky **Playwright** a **PyInstaller** nemají binárky pro Android, takže `uv sync --extra dev` na Termuxu selže — pro spuštění aplikace nejsou potřeba.
 
 > ⚠️ **Webový režim** běží ve výchozím nastavení jen na adrese `127.0.0.1` (přístupný pouze z daného zařízení). Server nemá žádné přihlášení — pokud ho zpřístupníš jiným zařízením v síti (`AETHER_HOST` / `--host`), **kdokoli v síti může procházet soubory a spouštět stahování**. Výchozí nastavení neměň, pokud si jsi jistý, co děláš.
 

@@ -8,6 +8,7 @@
 ### Změněno
 - CI: OSV-Scanner pin na `v2.3.8` (major tag `v2` neexistuje).
 - README: správné pořadí v Obsahu (Ukázky až za Rychlý start).
+- Dokumentace: Android (Termux) – do `pkg install` přidáno `git` (v Termuxu není předinstalovaný), `rust`, `binutils` a `clang` (kompilace balíčků bez Android kola); instalace bez dev balíčků `uv sync` – Playwright a PyInstaller nemají binárky pro Android, pro vývoj se vynechávají přes `--no-install-package`.
 
 ## [1.3.4] – 2026-08-03
 

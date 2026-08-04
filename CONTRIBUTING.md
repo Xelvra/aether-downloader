@@ -237,17 +237,25 @@ Všechny funkce aplikace fungují stejně jako v desktopovém režimu.
 
 ### Android (Termux)
 
-Na Termuxu se systémové balíčky instalují správcem `pkg` (ne `apt`/`apk`):
+Na Termuxu se systémové balíčky instalují správcem `pkg` (ne `apt`/`apk`). `git` v Termuxu není předinstalovaný, proto ho nainstaluj taky. `rust`, `binutils` a `clang` jsou potřeba k tomu, aby se Python balíčky bez Android kola (wheel) mohly zkompilovat ze zdroje:
 
 ```bash
-pkg install ffmpeg python uv
+pkg install ffmpeg python git uv rust binutils clang
 ```
 
-Poté pokračuj podle sekce [Vývojářské prostředí](#vývojářské-prostředí). Není-li `uv` v repozitářích Termuxu, nainstaluj ho standardním instalačním skriptem:
+Není-li `uv` v repozitářích Termuxu, nainstaluj ho standardním instalačním skriptem:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
+
+Pak pokračuj podle sekce [Vývojářské prostředí](#vývojářské-prostředí) — **s jednou výjimkou**: `uv sync --extra dev` na Androidu selže, protože **Playwright** a **PyInstaller** nemají binárky pro Android (`android_24_arm64_v8a`). Další balíčky bez Android kola (např. `ruff`, `uvloop`, `pydantic-core`, `watchfiles`) se kompilují ze zdroje — k tomu potřebuješ výše zmíněný **Rust** a build nástroje. Pro běh aplikace stačí běžné `uv sync`; potřebuješ-li vývojové balíčky, vynech tyto dva:
+
+```bash
+uv sync --no-install-package playwright --no-install-package pyinstaller
+```
+
+Nativní binárku přes PyInstaller z Termuxu sestavit nelze — aplikace se na Androidu vždy spouští ze zdrojového kódu (viz [Sestavení binárky](#sestavení-binárky)).
 
 ---
 
@@ -382,6 +390,7 @@ Podporovaná verze yt-dlp je ohraničená v `pyproject.toml` (`yt-dlp>=2024.12.0
 | Problém | Řešení |
 |---|---|
 | `uv sync` selže na zámku závislostí | Zkontroluj, že `uv.lock` odpovídá `pyproject.toml`: `uv sync --locked`. Pokud ne, spusť `uv lock` a commitni aktualizovaný lockfile. |
+| `uv sync --extra dev` na Termuxu (Android) selže | Playwright a PyInstaller nemají binárky pro Android. Pro běh aplikace stačí `uv sync`; pro vývoj doinstaluj `pkg install rust binutils clang` a použij `uv sync --no-install-package playwright --no-install-package pyinstaller` (viz [Android (Termux)](#android-termux)). |
 | `pytest --cov` selže na pokrytí | Práh je 80 %. Přidej testy pro nově napsaný kód, nebo zkontroluj, že jsi neodstranil existující testy. |
 | Sestavení na Linuxu selže na `strip` | Chybí `binutils` — nainstaluj podle [sekce Sestavení binárky](#sestavení-binárky). |
 | GUI testy se přeskočí | Není nainstalovaný Chromium — spusť `uv run playwright install chromium`. |
