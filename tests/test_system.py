@@ -4,6 +4,58 @@ import stahovac.utils.system as sys_mod
 from stahovac.utils.system import open_path
 
 
+class TestIsWine:
+    def test_linux_never_wine(self, monkeypatch):
+        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Linux")
+        assert sys_mod._is_wine() is False
+
+    def test_windows_with_wine_env_is_wine(self, monkeypatch):
+        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Windows")
+        monkeypatch.setenv("WINEPREFIX", "/home/t/.wine")
+        monkeypatch.delenv("WINELOADER", raising=False)
+        monkeypatch.delenv("WINESERVER", raising=False)
+        assert sys_mod._is_wine() is True
+
+    def test_windows_without_markers_not_wine(self, monkeypatch):
+        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Windows")
+        monkeypatch.delenv("WINELOADER", raising=False)
+        monkeypatch.delenv("WINESERVER", raising=False)
+        monkeypatch.delenv("WINEPREFIX", raising=False)
+        monkeypatch.setattr(sys, "executable", "/usr/bin/python3")
+        assert sys_mod._is_wine() is False
+
+    def test_windows_wine_in_executable_is_wine(self, monkeypatch):
+        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Windows")
+        monkeypatch.delenv("WINELOADER", raising=False)
+        monkeypatch.delenv("WINESERVER", raising=False)
+        monkeypatch.delenv("WINEPREFIX", raising=False)
+        monkeypatch.setattr(sys, "executable", "/usr/lib/wine/wine64/.../python.exe")
+        assert sys_mod._is_wine() is True
+
+
+class TestWineToUnix:
+    def test_z_drive_to_root(self):
+        assert sys_mod._wine_to_unix(r"Z:\home\pc\videos\x.mp4") == "/home/pc/videos/x.mp4"
+
+    def test_z_drive_forward_slashes(self):
+        assert sys_mod._wine_to_unix("Z:/home/pc/videos/x.mp4") == "/home/pc/videos/x.mp4"
+
+    def test_c_drive_to_wineprefix(self, monkeypatch):
+        monkeypatch.setenv("WINEPREFIX", "/tmp/prefix")
+        assert (
+            sys_mod._wine_to_unix(r"C:\Users\pc\Downloads\x.mp4")
+            == "/tmp/prefix/dosdevices/c:/Users/pc/Downloads/x.mp4"
+        )
+
+    def test_c_drive_default_prefix(self, monkeypatch, tmp_path):
+        monkeypatch.delenv("WINEPREFIX", raising=False)
+        result = sys_mod._wine_to_unix(r"C:\foo\x.mp4")
+        assert result.endswith("dosdevices/c:/foo/x.mp4")
+
+    def test_native_path_unchanged(self):
+        assert sys_mod._wine_to_unix("/home/pc/x.mp4") == "/home/pc/x.mp4"
+
+
 class TestRun:
     def test_success(self):
         ok, message = sys_mod._run([sys.executable, "-c", "pass"])
@@ -66,6 +118,17 @@ class TestOpenPath:
         assert message == ""
         assert called == [str(tmp_path.resolve())]
 
+    def test_windows_wine_uses_linux_opener(self, tmp_path, monkeypatch):
+        """Pod Wine se místo os.startfile použije Linux otevírač (unixová cesta)."""
+        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Windows")
+        monkeypatch.setattr(sys_mod, "_is_wine", lambda: True)
+        monkeypatch.setattr(sys_mod, "_wine_to_unix", lambda p: "/tmp/unix/" + p.split(":")[-1])
+        opened = []
+        monkeypatch.setattr(sys_mod, "_open_linux", lambda p: opened.append(p) or (True, ""))
+        ok, _ = open_path(str(tmp_path))
+        assert ok is True
+        assert opened, "Linux otevírač se měl použít pod Wine"
+
     def test_macos_open_success(self, tmp_path, monkeypatch):
         monkeypatch.setattr(sys_mod.platform, "system", lambda: "Darwin")
         monkeypatch.setattr(sys_mod, "_run", lambda cmd, timeout=10: (True, ""))
@@ -124,6 +187,17 @@ class TestRevealInFileManager:
         assert ok is True
         assert message == ""
         assert called == [["explorer", f"/select,{tmp_path.resolve()}"]]
+
+    def test_windows_wine_uses_linux_reveal(self, tmp_path, monkeypatch):
+        """Pod Wine se místo explorer /select použije Linux správce souborů."""
+        monkeypatch.setattr(sys_mod.platform, "system", lambda: "Windows")
+        monkeypatch.setattr(sys_mod, "_is_wine", lambda: True)
+        monkeypatch.setattr(sys_mod, "_wine_to_unix", lambda p: "/tmp/unix/" + p.split(":")[-1])
+        revealed = []
+        monkeypatch.setattr(sys_mod, "_reveal_linux", lambda p: revealed.append(p) or (True, ""))
+        ok, _ = sys_mod.reveal_in_file_manager(str(tmp_path))
+        assert ok is True
+        assert revealed, "Linux správce souborů se měl použít pod Wine"
 
     def test_macos_open_reveal(self, tmp_path, monkeypatch):
         monkeypatch.setattr(sys_mod.platform, "system", lambda: "Darwin")

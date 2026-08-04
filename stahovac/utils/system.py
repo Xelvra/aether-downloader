@@ -1,7 +1,40 @@
 import os
 import platform
 import subprocess
+import sys
 from pathlib import Path
+
+
+def _is_wine() -> bool:
+    """True, když aplikace běží pod Wine (Windows binárka na Linuxu/BSD).
+
+    Wine hlásí ``platform.system() == "Windows"``, ale ``os.startfile``
+    (chyba ``WinError 6``) ani ``explorer /select`` (tichá no-op) pod ním
+    nefungují spolehlivě. Detekce podle proměnných prostředí a cesty
+    k Python interpretu – pak se použijí nativní Linux otevírače.
+    """
+    if platform.system() != "Windows":
+        return False
+    if any(os.environ.get(k) for k in ("WINELOADER", "WINESERVER", "WINEPREFIX")):
+        return True
+    return "wine" in (sys.executable or "").lower()
+
+
+def _wine_to_unix(path: str) -> str:
+    """Převede Windows cestu (``C:\\…``, ``Z:\\…``) na Unix cestu pro Wine.
+
+    ``Z:\\`` ukazuje na Linuxový root (``/``), ostatní disky na
+    ``$WINEPREFIX/dosdevices/<disk>:/``. Nativní cesty se vrátí beze změny.
+    """
+    p = str(path).replace("/", "\\")
+    if len(p) >= 2 and p[1] == ":":
+        drive = p[0].lower()
+        tail = p[2:].lstrip("\\").replace("\\", "/")
+        if drive == "z":
+            return "/" + tail
+        wineprefix = os.environ.get("WINEPREFIX") or str(Path.home() / ".wine")
+        return str(Path(wineprefix) / "dosdevices" / f"{drive}:" / tail)
+    return str(path)
 
 
 def _run(cmd: list[str], timeout: int = 10) -> tuple[bool, str]:
@@ -67,6 +100,8 @@ def open_path(path_str: str) -> tuple[bool, str]:
     system = platform.system()
     try:
         if system == "Windows":
+            if _is_wine():
+                return _open_linux(_wine_to_unix(str(path)))
             return _run_startfile(str(path))
         if system == "Darwin":
             return _run(["open", str(path)])
@@ -122,6 +157,8 @@ def reveal_in_file_manager(path_str: str) -> tuple[bool, str]:
     system = platform.system()
     try:
         if system == "Windows":
+            if _is_wine():
+                return _reveal_linux(_wine_to_unix(str(path)))
             return _reveal_windows(str(path))
         if system == "Darwin":
             return _run(["open", "-R", str(path)])
