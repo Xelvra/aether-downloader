@@ -17,6 +17,7 @@ from stahovac.config.constants import (
 from stahovac.core import ffmpeg
 from stahovac.downloader import DownloadManager
 from stahovac.gui.download_view import DownloadView
+from stahovac.gui.ffmpeg_install import FfmpegInstallController
 from stahovac.gui.help_view import build_help_content
 from stahovac.gui.logs_view import LogsView
 from stahovac.gui.quality_view import QualityView
@@ -366,8 +367,7 @@ class GuiApp:
             color=COLOR_SUCCESS,
             text_align=ft.TextAlign.CENTER,
         )
-        self._ffmpeg_installing = False
-        self._last_ffmpeg_progress = 0.0
+        self.ffmpeg_install = FfmpegInstallController(self)
 
     # --- Navigation ---
 
@@ -492,78 +492,8 @@ class GuiApp:
         )
 
     def _start_ffmpeg_install(self, auto: bool = False):
-        """Spustí instalaci FFmpeg na pozadí.
-
-        ``auto=True`` – volá se automaticky při prvním ořezu/MP3 (bez zásahu
-        uživatele). Průběh běží ve společném progress pruhu jako stahování.
-        """
-        if self._ffmpeg_installing:
-            return
-        if not ffmpeg.claim_install():
-            self._ffmpeg_installing = True
-            return
-        self._ffmpeg_installing = True
-        self._last_ffmpeg_progress = 0.0
-        self._set_ffmpeg_progress(None)
-        self._run_ui_thread(self.storage_view.set_ffmpeg_installing, True, "Stahuji FFmpeg…")
-        threading.Thread(target=self._ffmpeg_install_worker, daemon=True).start()
-        self._safe_page_update()
-
-    def _set_ffmpeg_progress(self, percent: float | None):
-        self._progress_bar.visible = True
-        self._progress_bar.value = percent / 100.0 if percent is not None else None
-        self._status_text.value = "Stahuji FFmpeg…"
-        self._status_text.color = COLOR_WARN
-
-    def _ffmpeg_install_worker(self):
-        def progress(percent, speed, eta):
-            self._run_ui_thread(self._apply_ffmpeg_progress, percent, speed, eta)
-
-        try:
-            installed = ffmpeg.run_install(progress_cb=progress)
-        except Exception as ex:
-            self._run_ui_thread(self._apply_ffmpeg_install_failed, str(ex))
-        else:
-            self._run_ui_thread(self._apply_ffmpeg_install_done, installed is not None)
-
-    def _apply_ffmpeg_progress(self, percent, speed, eta):
-        with self._ui_lock:
-            now = time.time()
-            if now - self._last_ffmpeg_progress < 0.15:
-                return
-            self._last_ffmpeg_progress = now
-            text = f"Stahuji FFmpeg… {percent:.1f}%  \u2022  {speed}  \u2022  Zbývá: {eta}"
-            self._progress_bar.visible = True
-            self._progress_bar.value = percent / 100.0
-            self._status_text.value = text
-            self._status_text.color = COLOR_WARN
-            self._safe_page_update()
-
-    def _apply_ffmpeg_install_done(self, ok: bool):
-        with self._ui_lock:
-            self._ffmpeg_installing = False
-            self.storage_view.set_ffmpeg_installing(False)
-            if ok:
-                self._status_text.value = "FFmpeg připraven."
-                self._status_text.color = COLOR_SUCCESS
-            else:
-                self._status_text.value = "FFmpeg se nepodařilo nainstalovat. Zkus to v Nastavení."
-                self._status_text.color = COLOR_WARN
-            if not self._is_downloading:
-                self._progress_bar.visible = False
-            else:
-                self._progress_bar.value = None
-            self._safe_page_update()
-
-    def _apply_ffmpeg_install_failed(self, error: str):
-        with self._ui_lock:
-            self._ffmpeg_installing = False
-            self.storage_view.set_ffmpeg_installing(False)
-            self._status_text.value = f"FFmpeg se nepodařilo nainstalovat ({error}). Návod najdeš v nápovědě."
-            self._status_text.color = COLOR_WARN
-            if not self._is_downloading:
-                self._progress_bar.visible = False
-            self._safe_page_update()
+        """Deleguje na `FfmpegInstallController` (instalace FFmpeg na pozadí)."""
+        self.ffmpeg_install.start(auto=auto)
 
     def _safe_page_update(self):
         import contextlib
@@ -627,7 +557,7 @@ class GuiApp:
 
     def _apply_progress(self, percent: float, speed: str, eta: str):
         with self._ui_lock:
-            if self._ffmpeg_installing:
+            if self.ffmpeg_install.installing:
                 return
             now = time.time()
             if now - self._last_progress_update > 0.15:
@@ -639,7 +569,7 @@ class GuiApp:
     def _apply_status(self, text: str, color: str):
         with self._ui_lock:
             self._append_logs()
-            if self._ffmpeg_installing:
+            if self.ffmpeg_install.installing:
                 return
             self._status_text.value = text
             self._status_text.color = color

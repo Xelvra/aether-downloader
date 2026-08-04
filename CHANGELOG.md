@@ -15,6 +15,7 @@
 - Logování: nový `utils/logging.py::configure_logging()` – technické logy z `logging` modulu (Kick/metadata/ssl/yt-dlp) se už neztrácejí, ale píšou se do `app.log` v app-data adresáři (`RotatingFileHandler`, DEBUG) s konzolí na WARNING; zavolá se při startu v `_setup_runtime()`. Souborové logy pomůžou při hlášení bugů (Discord/GitHub Issues).
 - Ikonky: `ICON_SIZE`/`ICON_SIZE_LARGE` (zamrzlé konstanty z importu) nahrazeny funkcemi `icon_size()`/`icon_size_large()` v `theme.py` – ikony se teď škálují konzistentně se `sz()` při přechodu přes breakpointy (audit §4.2).
 - Validace stahování: validační řetězec (URL, časový rozsah, CRF) přesunut z `GuiApp._start_download_impl` do `core/validator.py::validate_download_params()` s fasádou `DownloadManager.validate()` – validace už nežije v GUI vrstvě, může ji použít i budoucí CLI/vstupní bod (audit §6.2).
+- FFmpeg instalace: flow (start/progress/done/failed) vydělen z `GuiApp` do nového `FfmpegInstallController` (`gui/ffmpeg_install.py`); `GuiApp` jen deleguje přes `self.ffmpeg_install` (audit §6.2).
 
 ## [1.3.4] – 2026-08-03
 
