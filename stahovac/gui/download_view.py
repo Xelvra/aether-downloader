@@ -43,6 +43,7 @@ class DownloadView:
         self._last_url_fetched = ""
         self._debounce_timer: threading.Timer | None = None
         self._metadata_request_id = 0
+        self._closed = False
         self._metadata_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="meta")
 
         self.refresh_overlay = ft.Container(
@@ -230,12 +231,17 @@ class DownloadView:
             if self._on_metadata_fetched:
                 self._on_metadata_fetched(metadata)
 
+        if self._closed:
+            return
         try:
             self._metadata_executor.submit(fetch_worker)
         except RuntimeError:
             self._metadata_request_id += 1
 
     def close(self):
+        if self._closed:
+            return
+        self._closed = True
         if self._debounce_timer:
             self._debounce_timer.cancel()
             self._debounce_timer = None

@@ -216,13 +216,21 @@ class TestSetDownloading:
 
 
 class TestClose:
-    def test_close_is_idempotent_and_shuts_executor(self):
+    def test_close_is_idempotent_and_shuts_executor_once(self):
         view, _, _ = _make()
         view._metadata_executor = _FakeExecutor()
         view.close()
         view.close()
-        assert view._metadata_executor.shutdown_calls == 2
+        assert view._metadata_executor.shutdown_calls == 1
         assert view._debounce_timer is None
+
+    def test_refresh_after_close_does_not_submit(self):
+        view, _, _ = _make()
+        view._metadata_executor = _FakeExecutor()
+        view.close()
+        view.url_input.value = "https://youtu.be/abc"
+        view.refresh_metadata()
+        assert view._metadata_executor.submitted == []
 
 
 class TestBuildMetadataCard:
