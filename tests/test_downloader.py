@@ -729,6 +729,12 @@ class TestUniqueDest:
         (tmp_path / "a.mkv").write_text("x")
         assert dl_mod._unique_dest(tmp_path, "a.mkv") == tmp_path / "a (1).mkv"
 
+    def test_more_than_1000_collisions_finds_free_name(self, tmp_path):
+        (tmp_path / "a.mp4").write_text("x")
+        for i in range(1, 1001):
+            (tmp_path / f"a ({i}).mp4").write_text("x")
+        assert dl_mod._unique_dest(tmp_path, "a.mp4") == tmp_path / "a (1001).mp4"
+
 
 class TestFinishCallbacks:
     def test_finish_success(self, tmp_path, monkeypatch):

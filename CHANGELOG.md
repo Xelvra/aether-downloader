@@ -13,6 +13,7 @@
 - Testy: `TestDoStartDownload` mockuje `ffmpeg.find_ffmpeg` – testy jsou deterministické i v CI bez nainstalovaného FFmpeg.
 
 ### Změněno
+- Oprava (audit CRITICAL-06): `_unique_dest()` už nemá arbitrární limit 999 kolizí (`while True` místo `range(1, 1000)`) – po 999 shodných názvech se soubor nikdy nepřepíše. Regresní test s 1000+ kolizemi.
 - Oprava (audit CRITICAL-04): nový `utils/paths.py::truncate_filename()` + konstanta `MAX_FILENAME_STEM` (150) – extrémně dlouhé tituly videí (300+ znaků) už nezpůsobí OSError/FileNotFoundError. Aplikováno na názvy ranged HLS výstupu, FFmpeg ořezu i přesunu hotových souborů. Regresní testy.
 - Oprava (audit CRITICAL-02): `DownloadView` dostal `_closed` flag – `close()` ho nastaví a `refresh_metadata()` po zavření už neodešle práci do `ThreadPoolExecutor` (race při shutdown se nezakrývá jen `except RuntimeError`). Regresní testy.
 - Oprava (audit CRITICAL-01): `DownloadView.refresh_metadata()` už nepolyká `except Exception` – chytá jen očekávané `MetadataError` (nová výjimka v `core/metadata.py`, do které se balí chyby yt-dlp). Programátorské/threadové chyby se zalogují a propadnou, aby šly odhalit. Regresní testy.

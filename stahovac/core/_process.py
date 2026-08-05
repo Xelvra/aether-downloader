@@ -94,11 +94,12 @@ def _unique_dest(dest_dir: Path, name: str) -> Path:
     if not dest.exists():
         return dest
     stem, suffix = dest.stem, dest.suffix
-    for i in range(1, 1000):
+    i = 1
+    while True:
         candidate = dest_dir / f"{stem} ({i}){suffix}"
         if not candidate.exists():
             return candidate
-    return dest
+        i += 1
 
 
 import stahovac.core.downloader as dl_mod  # noqa: E402  (cyklický import – jen runtime přístup)
