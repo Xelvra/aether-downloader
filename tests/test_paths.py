@@ -6,7 +6,35 @@ from stahovac.utils.paths import (
     get_frozen_base_dir,
     migrate_bundle_data,
     set_base_dir,
+    truncate_filename,
 )
+
+
+class TestTruncateFilename:
+    def test_short_name_unchanged(self):
+        assert truncate_filename("video.mp4") == "video.mp4"
+
+    def test_long_name_capped_with_suffix_preserved(self):
+        name = "x" * 300 + ".mp4"
+        result = truncate_filename(name)
+        assert len(result) == 150 + 4
+        assert result.endswith(".mp4")
+        assert result.startswith("x" * 150)
+
+    def test_long_title_without_extension_capped(self):
+        result = truncate_filename("y" * 300)
+        assert len(result) == 150
+        assert result == "y" * 150
+
+    def test_dotted_long_name_keeps_last_suffix(self):
+        name = "z" * 200 + ".2024.mp4"
+        result = truncate_filename(name)
+        assert result.endswith(".mp4")
+        assert len(result) <= 150 + 4
+
+    def test_name_at_limit_unchanged(self):
+        name = "k" * 150 + ".srt"
+        assert truncate_filename(name) == name
 
 
 class TestPaths:

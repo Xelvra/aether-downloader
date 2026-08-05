@@ -51,6 +51,7 @@ from stahovac.platforms import platform_opts
 from stahovac.storage.history import HistoryManager
 from stahovac.utils.format import format_eta as _format_eta  # noqa: F401  (re-export pro testy)
 from stahovac.utils.format import format_speed as _format_speed  # noqa: F401  (re-export pro testy)
+from stahovac.utils.paths import truncate_filename
 
 JOBS_DIR_NAME = ".jobs"
 AETHER_KEEP_FAILED_JOBS = "AETHER_KEEP_FAILED_JOBS"
@@ -244,7 +245,7 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
         moved: list[Path] = []
         for f in sorted(job_dir.iterdir()):
             if f.is_file():
-                dest = _unique_dest(dest_dir, f.name)
+                dest = _unique_dest(dest_dir, truncate_filename(f.name))
                 os.replace(f, dest)
                 moved.append(dest)
         if not moved:

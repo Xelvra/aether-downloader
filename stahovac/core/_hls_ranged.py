@@ -15,6 +15,7 @@ from stahovac.config.constants import END_OPTION_FULL, QUALITY_BEST
 from stahovac.core._ffmpeg import FfmpegTrimMixin, _fmt_timestamp
 from stahovac.core.metadata import MetadataError, MetadataService
 from stahovac.core.validator import pad_time
+from stahovac.utils.paths import truncate_filename
 
 
 def _can_ranged_hls(url: str) -> bool:
@@ -66,7 +67,7 @@ def _select_hls_formats(info: dict | None, quality: str) -> tuple[dict | None, d
 def _ranged_output_name(title: str, quality: str, start_time: str, end_time: str, end_option: str) -> str:
     from yt_dlp.utils import sanitize_filename
 
-    stem: str = sanitize_filename(title)
+    stem: str = truncate_filename(sanitize_filename(title))
     if quality != QUALITY_BEST:
         stem += f" [{quality}]"
     start_safe = _fmt_timestamp(pad_time(start_time))

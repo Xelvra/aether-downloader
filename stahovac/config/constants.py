@@ -16,6 +16,11 @@ END_OPTION_END = "Do určitého času"
 
 CRF_DEFAULT = 23
 
+# Bezpečná délka „kmene" názvu souboru – extrémně dlouhé tituly (YouTube umí
+# 300+ znaků) by jinak končily OSError/FileNotFoundError na běžných
+# filesystémech (Windows MAX_PATH, ext4 255 B na komponentu).
+MAX_FILENAME_STEM = 150
+
 
 class MediaFormat(str, Enum):
     MP4 = "Video + audio (MP4)"

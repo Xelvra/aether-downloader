@@ -2,12 +2,29 @@ import shutil
 import sys
 from pathlib import Path
 
-from stahovac.config.constants import CONFIG_FILE_NAME, DOWNLOADS_DIR_NAME, HISTORY_FILE_NAME
+from stahovac.config.constants import CONFIG_FILE_NAME, DOWNLOADS_DIR_NAME, HISTORY_FILE_NAME, MAX_FILENAME_STEM
 
 _BASE_DIR: Path | None = None
 
 APP_SUPPORT_DIR_NAME = "Application Support"
 APP_DATA_DIR_NAME = "AetherDownloader"
+
+
+def truncate_filename(name: str, max_stem_len: int = MAX_FILENAME_STEM) -> str:
+    """Zkrátí název souboru na bezpečnou délku pro běžné filesystémy.
+
+    Řeže se jen „kmen" názvu; poslední krátká přípona (``.mp4``, ``.srt``, …)
+    se zachovává. Chrání před OSError/FileNotFoundError u extrémně dlouhých
+    titulů videí (YouTube umí 300+ znaků).
+    """
+    base, dot, suffix = name.rpartition(".")
+    if dot and base and len(suffix) <= 10 and suffix.isalnum():
+        if len(base) <= max_stem_len:
+            return name
+        return base[:max_stem_len] + dot + suffix
+    if len(name) <= max_stem_len:
+        return name
+    return name[:max_stem_len]
 
 
 def set_base_dir(path: Path) -> None:

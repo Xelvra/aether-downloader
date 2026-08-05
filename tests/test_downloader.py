@@ -568,6 +568,12 @@ class TestBuildFfmpegCmd:
         )
         assert cmd[0] == "/opt/bin/ffmpeg"
 
+    def test_very_long_input_stem_capped(self, tmp_path):
+        cmd, out = _build_ffmpeg_cmd(tmp_path / ("L" * 300 + ".mp4"), "00:01:00", "00:02:00", "Do určitého času")
+        assert len(out.name) <= 255
+        assert out.name.endswith(".mp4")
+        assert out.name.startswith("L" * 150)
+
 
 class TestEstimateCutDuration:
     def test_to_end_of_video_unknown(self):
@@ -1599,6 +1605,13 @@ class TestRangedHls:
     def test_ranged_output_name_to_end(self):
         name = _ranged_output_name("Stream", QUALITY_BEST, "00:01:00", "00:00", "Do konce videa")
         assert name == "Stream [00h01m00s-inf].mp4"
+
+    def test_ranged_output_name_very_long_title_capped(self):
+        long_title = "N" * 300
+        name = _ranged_output_name(long_title, "1080p", "00:01:30", "00:02:30", "Manuální čas")
+        assert name.endswith(".mp4")
+        assert len(name) <= 255
+        assert name.startswith("N" * 150)
 
     def test_build_ranged_cmd_copy(self):
         video = _hls_fmt("v", "https://x/v.m3u8", headers={"User-Agent": "UA", "Referer": "https://kick.com/"})

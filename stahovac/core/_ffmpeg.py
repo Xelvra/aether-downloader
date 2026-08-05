@@ -15,6 +15,7 @@ from queue import Empty, Queue
 
 from stahovac.config.constants import END_OPTION_FULL
 from stahovac.core.validator import pad_time, time_to_seconds
+from stahovac.utils.paths import truncate_filename
 
 _RE_FFMPEG_TIME = re.compile(r"time=(\d+):(\d+):(\d+)")
 
@@ -62,7 +63,7 @@ def _build_ffmpeg_cmd(
         end_safe = _fmt_timestamp(to_arg)
         section_part = f" [{start_safe} - {end_safe}]"
 
-    output_path = input_path.with_name(f"{input_path.stem}{section_part}{input_path.suffix}")
+    output_path = input_path.with_name(f"{truncate_filename(input_path.stem)}{section_part}{input_path.suffix}")
 
     if re_encode:
         cmd = [ffmpeg_bin, "-y", "-i", str(input_path), "-ss", start_padded]
