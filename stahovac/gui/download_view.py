@@ -1,4 +1,5 @@
 import datetime
+import logging
 import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -6,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import flet as ft
 
 import stahovac.gui.theme as th
-from stahovac.core.metadata import MetadataService
+from stahovac.core.metadata import MetadataError, MetadataService
 from stahovac.core.validator import is_valid_url
 from stahovac.gui.theme import (
     BREAKPOINT_COMPACT,
@@ -19,6 +20,8 @@ from stahovac.gui.theme import (
     sz,
 )
 from stahovac.models import VideoMetadata
+
+logger = logging.getLogger(__name__)
 
 
 class DownloadView:
@@ -217,7 +220,8 @@ class DownloadView:
         def fetch_worker():
             try:
                 metadata = self._metadata.fetch(url, self._config)
-            except Exception:
+            except MetadataError as e:
+                logger.warning("Metadata fetch selhal pro %s: %s", url, e)
                 metadata = None
             if request_id != self._metadata_request_id:
                 return

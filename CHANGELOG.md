@@ -13,6 +13,7 @@
 - Testy: `TestDoStartDownload` mockuje `ffmpeg.find_ffmpeg` – testy jsou deterministické i v CI bez nainstalovaného FFmpeg.
 
 ### Změněno
+- Oprava (audit CRITICAL-01): `DownloadView.refresh_metadata()` už nepolyká `except Exception` – chytá jen očekávané `MetadataError` (nová výjimka v `core/metadata.py`, do které se balí chyby yt-dlp). Programátorské/threadové chyby se zalogují a propadnou, aby šly odhalit. Regresní testy.
 - Dokumentace: FFmpeg se automaticky stahuje vždy, když v systému chybí – ne jen k ořezu/MP3, ale i ke spojení obrazu se zvukem (merge) při stahování MP4. Aktualizováno v README a nápovědě v aplikaci (`help_content.py`).
 
 ## [1.3.5] – 2026-08-04

@@ -1,3 +1,6 @@
+import pytest
+
+from stahovac.core.metadata import MetadataError
 from stahovac.gui.download_view import DownloadView
 from stahovac.gui.theme import sz
 from stahovac.models import VideoMetadata
@@ -124,7 +127,7 @@ class TestRefreshMetadata:
     def test_worker_fetch_error_reports_none(self):
         class Boom(_FakeMeta):
             def fetch(self, url, config):
-                raise RuntimeError("network")
+                raise MetadataError("video unavailable")
 
         view, _, _ = _make(meta=Boom(), on_meta=lambda m: results.append(m))
         results = []
@@ -133,6 +136,18 @@ class TestRefreshMetadata:
         view.refresh_metadata()
         self._run_worker(view)
         assert results == [None]
+
+    def test_worker_unexpected_exception_not_swallowed(self):
+        class Boom(_FakeMeta):
+            def fetch(self, url, config):
+                raise RuntimeError("programming error")
+
+        view, _, _ = _make(meta=Boom())
+        view._metadata_executor = _FakeExecutor()
+        view.url_input.value = "https://youtu.be/abc"
+        view.refresh_metadata()
+        with pytest.raises(RuntimeError):
+            self._run_worker(view)
 
     def test_worker_success_calls_callback(self):
         meta = _FakeMeta(result=_meta())

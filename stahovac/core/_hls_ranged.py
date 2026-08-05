@@ -13,7 +13,7 @@ from pathlib import Path
 
 from stahovac.config.constants import END_OPTION_FULL, QUALITY_BEST
 from stahovac.core._ffmpeg import FfmpegTrimMixin, _fmt_timestamp
-from stahovac.core.metadata import MetadataService
+from stahovac.core.metadata import MetadataError, MetadataService
 from stahovac.core.validator import pad_time
 
 
@@ -109,7 +109,7 @@ class HlsRangedMixin(FfmpegTrimMixin):
                 extra_opts=extra_opts,
                 cancel_check=self._cancel_event.is_set,
             )
-        except dl_mod.yt_dlp.utils.YoutubeDLError as e:
+        except MetadataError as e:
             self.on_log(f"Ranged stahování úseku přeskočeno: {e}")
             return None
         if self.is_cancelled:

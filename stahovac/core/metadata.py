@@ -22,6 +22,15 @@ class YtdlLogger:
         logger.error("yt-dlp: %s", msg)
 
 
+class MetadataError(Exception):
+    """Očekávaná chyba načtení metadat (yt-dlp selhal standardním způsobem).
+
+    GUI chytá právě tuto výjimku a zobrazí „metadata nejsou“. Všechny ostatní
+    výjimky (programátorské chyby, thread/race chyby) se na rozdíl od dřívějška
+    nespolykají – propadnou dál, aby šly odhalit v logu a testech.
+    """
+
+
 class MetadataService:
     def __init__(self, cache_max: int = 50, log_callback=None):
         self._cache: dict[str, VideoMetadata] = {}
@@ -122,7 +131,10 @@ class MetadataService:
             opts.update(extra_opts)
 
         with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+            try:
+                info = ydl.extract_info(url, download=False)
+            except yt_dlp.utils.YoutubeDLError as e:
+                raise MetadataError(str(e)) from e
         return info or None
 
     def _evict_if_needed(self) -> None:

@@ -432,6 +432,29 @@ class TestMetadataService:
         svc.fetch_info("https://example.com", {})
         assert calls["n"] == 1
 
+    def test_extract_impl_wraps_ytdlp_errors_into_metadata_error(self, monkeypatch):
+        from stahovac.core import metadata as metadata_mod
+        from stahovac.core.metadata import MetadataError
+
+        class FakeYDL:
+            def __init__(self, opts):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def extract_info(self, url, download=False):
+                raise yt_dlp.utils.DownloadError("HTTP Error 404")
+
+        monkeypatch.setattr(metadata_mod.yt_dlp, "YoutubeDL", FakeYDL)
+        svc = MetadataService()
+        with pytest.raises(MetadataError) as excinfo:
+            svc.fetch_info("https://example.com", {})
+        assert "404" in str(excinfo.value)
+
 
 def _make_meta(title):
     from stahovac.models import VideoMetadata
