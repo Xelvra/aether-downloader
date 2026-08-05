@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Opraveno
+- Titulky: při stahování titulků z neanglického videa (např. českého) se nově stahují titulky v jazyce videa místo slepé angličtiny. yt-dlp bez `subtitleslangs` vždy preferoval `en` (často automatický překlad) – když se `en` nepodařilo stáhnout, vyhlásil „Unable to download video subtitles: en" a nestáhl se žádný soubor, i když titulky v jazyce videa existovaly. Nově se před stahováním vybere jazyk videa (původní jazyk ze `language` pole nebo z `-orig` automatických titulků), doplní se ruční jazyky a angličtina jen jako fallback; selhání jednoho jazyka už nezpůsobí ztrátu ostatních. Regresní testy.
+
 ## [1.3.6] – 2026-08-05
 
 ### Přidáno
