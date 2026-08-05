@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Přidáno
+- ROADMAP: sekce **„Technický dluh z auditu (05.08.2026)"** – zbylé nálezy (cyklické importy, monkeypatchování, kompozice místo mixinů, event struktura, sjednocení konfigurace, …) se naplánují spolu s dalšími funkcemi, takže nebude potřeba nový audit.
 - Dokumentace: `DEVELOPMENT_RULES.md` (pevná vývojová pravidla – Red-Green-Refactor, každý bug nese regresní test, gate před commitem, determinismus) a `tests/README.md` (konvence testů), odkazy z CONTRIBUTING.
 - Testy GUI: `tests/test_gui_quality_view.py` a `tests/test_gui_download_view.py` – unit testy event handlerů a změn props (toggle času/reencode, end-option, `update_qualities`, debounce, `refresh_metadata`, `update_metadata_ui`, `set_downloading`).
 - Testy GUI: `tests/test_gui_logs_view.py`, `tests/test_gui_storage_view.py`, `tests/test_gui_help_view.py` – render historie, otevírání souborů/složek (úspěch i chyba → notify), `_picker_mode`, pickery s debounce, stav FFmpeg, cookies, vykreslení nápovědy.

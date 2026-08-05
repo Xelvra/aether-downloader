@@ -27,6 +27,27 @@ má připravené místo, kam ji zapojit.
 
 ---
 
+## Technický dluh z auditu (05.08.2026)
+
+Zbylé nálezy nového auditu (mimo okamžitých oprav z Fáze 1 – ty jsou hotové).
+Položky se dělají postupně spolu s ostatními funkcemi – žádný nový audit není potřeba.
+
+| Položka | Popis | Úsilí |
+|---|---|---|
+| **Odstranit cyklické importy** | `import stahovac.core.downloader as dl_mod` na konci `core/_process.py`, `_ffmpeg.py`, `_ytdlp.py`, `_hls_ranged.py` je workaround kvůli monkeypatchování. Přejít na přímé importy / injektované závislosti. | Střední |
+| **Snížit monkeypatchování v testech** | 416 `monkeypatch.setattr` ve 24 souborech. Po odstranění `dl_mod` indirekce a mixinů výrazně klesne. | Střední |
+| **Kompozice místo mixinů** | `Downloader(YtDlpMixin, HlsRangedMixin)` – mixiny nesou stav/callbacky, ne polymorfismus. Cíl: injektovaný kontext (ffmpeg finder, process tracker, sanitizer, metadata, config, events). Dělá se až po odstranění cyklických importů. | Vysoké |
+| **Jedna event struktura místo callback explosion** | `on_status`/`on_log`/`on_finish`/`on_progress`/… → seskupit do `DownloaderEvents` (dataclass), později jedno `DownloadEvent`. | Střední |
+| **Sjednotit konfiguraci na `AppConfig`** | `AppState.config` je dict; `AppConfig` se používá jen při načtení/uložení. Cíl: `AppState` drží `AppConfig`, `to_dict()` jen na hranicích (Downloader, MetadataService). | Střední |
+| **GUI nesmí znát business logiku** | GUI zná `MetadataService`, callbacky z workeru. Cíl: GUI jen volá use-casy přes fasádu. | Střední |
+| **Úplná sanitizace příkazů v logu** | `_sanitize_cmd` maskuje query string a hlavičky, ale token v path (Bearer/OAuth) by unikl. | Nízké |
+| **Jediný vstupní bod validace URL** | `is_valid_url` se volá v GUI i ve validatoru – sjednotit volání. | Nízké |
+| **Rozšiřitelný registr platforem** | `PLATFORMS` vyžaduje ruční editaci registru – případně jednoduchá registrace (jen bez overengineeringu). | Nízké |
+| **TOCTOU u `Path.exists()`** | `exists()`/`is_file()`/`stat()` po sobě; teoretická race – volitelně `os.open(O_CREAT\|O_EXCL)`. | Nízké |
+| **Rozhodnutí: asyncio vs threading** | Metadata používají `Timer`/`ThreadPoolExecutor`/`threading` nad Fletem. Přepis na asyncio = velký rozsah, aktuálně bez přínosu – viz „K diskusi". | Vysoké |
+
+---
+
 ## K diskusi (rozhodnutí před implementací)
 
 ### i18n – rozvázání byznys hodnot od zobrazovaného textu
