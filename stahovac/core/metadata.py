@@ -37,6 +37,40 @@ class MetadataError(Exception):
     """
 
 
+def pick_subtitle_langs(info: dict | None) -> list[str] | None:
+    """Vybere jazyky titulků, které se mají při stahování vyžádat.
+
+    yt-dlp sám (bez `subtitleslangs`) vždy preferuje angličtinu – pro neanglická
+    videa pak vyzkouší stáhnout `en` (často automatický překlad) a když to
+    selže, vyhlásí „Unable to download video subtitles: en" a nestáhne nic.
+    Tady se přednost dá **jazyku videa** (původní jazyk ze `language` pole nebo
+    z `-orig` automatických titulků), doplní se ruční jazyky a angličtina jen
+    jako poslední fallback, pokud video anglické titulky vůbec nabízí.
+
+    Vrací seřazený seznam kódů (bez duplicit), nebo ``None``, když o metadatách
+    nevíme / video žádné titulky nemá (pak se `subtitleslangs` nenastaví).
+    """
+    if not info:
+        return None
+    automatic = info.get("automatic_captions") or {}
+    manual = info.get("subtitles") or {}
+    langs: list[str] = []
+
+    def _add(lang: object) -> None:
+        if isinstance(lang, str) and lang and lang not in langs:
+            langs.append(lang)
+
+    _add(info.get("language"))
+    for key in automatic:
+        if key.endswith("-orig") and key != "-orig":
+            _add(key[:-5])
+    for key in manual:
+        _add(key)
+    if "en" in automatic or "en" in manual:
+        _add("en")
+    return langs or None
+
+
 class MetadataService:
     def __init__(self, cache_max: int = 50, log_callback=None):
         self._cache: dict[str, VideoMetadata] = {}
@@ -48,6 +82,11 @@ class MetadataService:
     def get_cached(self, url: str) -> VideoMetadata | None:
         with self._cache_lock:
             return self._cache.get(url)
+
+    def get_cached_info(self, url: str) -> dict | None:
+        """Vrátí surová yt-dlp metadata z cache (včetně `automatic_captions`)."""
+        with self._cache_lock:
+            return self._info_cache.get(url)
 
     def fetch(
         self, url: str, config: dict, extra_opts: dict | None = None, cancel_check: Callable[[], bool] | None = None

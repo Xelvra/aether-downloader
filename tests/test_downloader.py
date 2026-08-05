@@ -23,7 +23,7 @@ from stahovac.core.downloader import (
     _sanitize_cmd,
     _select_hls_formats,
 )
-from stahovac.core.metadata import MetadataService
+from stahovac.core.metadata import MetadataService, pick_subtitle_langs
 from stahovac.models import DownloadParams, DownloadState
 from stahovac.platforms import platform_opts
 
@@ -112,7 +112,7 @@ class TestWorkerFfmpegOrdering:
 
         captured = {}
 
-        def fake_build_opts(params, config, hook):
+        def fake_build_opts(params, config, hook, subtitle_langs=None):
             captured["found"] = fake_find() is not None
             return {
                 "_job_id": "j1",
@@ -173,6 +173,65 @@ class TestBuildYdlOpts:
         monkeypatch.setattr(dl_mod, "find_ffmpeg", lambda: None)
         opts = _build_ydl_opts(_params(), {}, lambda d: None)
         assert "ffmpeg_location" not in opts
+
+    def test_subs_sets_subtitleslangs_when_provided(self):
+        opts = _build_ydl_opts(
+            _params(format_choice=MediaFormat.SUBS.value),
+            {},
+            lambda d: None,
+            subtitle_langs=["cs", "en"],
+        )
+        assert opts["subtitleslangs"] == ["cs", "en"]
+
+    def test_subs_omits_subtitleslangs_when_missing(self):
+        opts = _build_ydl_opts(_params(format_choice=MediaFormat.SUBS.value), {}, lambda d: None)
+        assert "subtitleslangs" not in opts
+
+
+class TestPickSubtitleLangs:
+    def test_prefers_original_language_with_en_fallback(self):
+        info = {
+            "language": "cs",
+            "automatic_captions": {"cs": [], "cs-orig": [], "en": [], "de": []},
+            "subtitles": {},
+        }
+        assert pick_subtitle_langs(info) == ["cs", "en"]
+
+    def test_uses_orig_suffix_when_language_field_missing(self):
+        info = {
+            "language": None,
+            "automatic_captions": {"ko": [], "ko-orig": [], "en": []},
+            "subtitles": {},
+        }
+        assert pick_subtitle_langs(info) == ["ko", "en"]
+
+    def test_includes_manual_subtitle_languages(self):
+        info = {
+            "language": "cs",
+            "automatic_captions": {"cs": [], "cs-orig": [], "en": []},
+            "subtitles": {"cs": [], "en": [], "de": []},
+        }
+        assert pick_subtitle_langs(info) == ["cs", "en", "de"]
+
+    def test_no_en_when_not_available(self):
+        info = {
+            "language": None,
+            "automatic_captions": {},
+            "subtitles": {"cs": []},
+        }
+        assert pick_subtitle_langs(info) == ["cs"]
+
+    def test_dedupes_original_manual_and_orig_suffix(self):
+        info = {
+            "language": "cs",
+            "automatic_captions": {"cs": [], "cs-orig": [], "en": []},
+            "subtitles": {"cs": []},
+        }
+        assert pick_subtitle_langs(info) == ["cs", "en"]
+
+    def test_returns_none_for_empty_or_missing_info(self):
+        assert pick_subtitle_langs(None) is None
+        assert pick_subtitle_langs({}) is None
 
 
 class TestAudioFormatSelection:
@@ -1076,6 +1135,36 @@ class TestDownloadWorker:
         dl.start(_params(output_folder=str(tmp_path), whole_video=True))
         dl._thread.join(timeout=5)
         assert captured["_cancel_check"]() is False
+
+    def test_worker_subs_uses_video_original_language(self, tmp_path):
+        """Regrese: při stahování titulků se má vyžádat jazyk videa (původní),
+        ne slepě angličtina – jinak yt-dlp vybere `en` a pro neanglická videa
+        stáhne nic (nebo vyhlásí chybu o `en`)."""
+        from stahovac.utils.paths import set_base_dir
+
+        set_base_dir(tmp_path)
+        dl = Downloader({})
+        captured = {}
+        dl._get_title = lambda url: "Mock Title"
+        dl._download_with_ytdlp = lambda url, opts, job_id: captured.update(opts) or True
+        dl.metadata._store_info(
+            "https://www.youtube.com/watch?v=abc",
+            {
+                "language": "cs",
+                "automatic_captions": {"cs": [], "cs-orig": [], "en": [], "de": []},
+                "subtitles": {},
+            },
+        )
+        output = tmp_path / "out"
+        job_dir = output / JOBS_DIR_NAME / "j1"
+        job_dir.mkdir(parents=True)
+        (job_dir / "Mock Title.cs.srt").write_text("x")
+        dl._download_worker(
+            _params(format_choice=MediaFormat.SUBS.value, output_folder=str(output)),
+            "j1",
+        )
+        assert captured["subtitleslangs"] == ["cs", "en"]
+        assert captured["writesubtitles"] is True
 
     def test_cancel_frees_thread_for_restart(self, tmp_path, monkeypatch):
         from stahovac.utils.paths import set_base_dir

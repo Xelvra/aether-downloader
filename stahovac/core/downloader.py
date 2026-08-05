@@ -53,7 +53,7 @@ from stahovac.core._process import (  # noqa: F401  (re-export: monkeypatch targ
 )
 from stahovac.core._ytdlp import YtDlpMixin, _build_ydl_opts, _ensure_ffmpeg_ready
 from stahovac.core.ffmpeg import find_ffmpeg, wait_until_ready  # noqa: F401  (monkeypatch targety)
-from stahovac.core.metadata import MetadataService
+from stahovac.core.metadata import MetadataService, pick_subtitle_langs
 from stahovac.models import DownloadParams, DownloadState
 from stahovac.platforms import platform_opts
 from stahovac.storage.history import HistoryManager
@@ -164,7 +164,15 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
             # Počkáme na auto-instalaci FFmpeg PŘED sestavením opts – jen tak
             # `_build_ydl_opts` nastaví platný ffmpeg_location (merge/MP3/ořez).
             _ensure_ffmpeg_ready()
-            opts = _build_ydl_opts(params, self._config, lambda d: self._progress_hook(job_id, d))
+            subtitle_langs = None
+            if params.format_choice == MediaFormat.SUBS.value:
+                subtitle_langs = pick_subtitle_langs(self._metadata.get_cached_info(url))
+            opts = _build_ydl_opts(
+                params,
+                self._config,
+                lambda d: self._progress_hook(job_id, d),
+                subtitle_langs,
+            )
             opts["outtmpl"] = str(job_dir / "%(title)s.%(ext)s")
             opts["overwrites"] = False
             opts["paths"] = {"home": str(job_dir)}

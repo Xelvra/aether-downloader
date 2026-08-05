@@ -54,6 +54,7 @@ def _build_ydl_opts(
     params: DownloadParams,
     config: dict,
     progress_hook,
+    subtitle_langs: list[str] | None = None,
 ) -> dict:
     url = params.url
     quality = params.quality
@@ -87,6 +88,8 @@ def _build_ydl_opts(
         opts["writeautomaticsub"] = True
         opts["subtitlesformat"] = "srt/best"
         opts["skip_download"] = True
+        if subtitle_langs:
+            opts["subtitleslangs"] = subtitle_langs
         opts["postprocessors"] = [
             {
                 "key": "FFmpegSubtitlesConvertor",
