@@ -7,6 +7,7 @@ na konci souboru.
 """
 
 import threading
+import traceback
 from collections.abc import Callable
 from pathlib import Path
 
@@ -187,8 +188,8 @@ class YtDlpMixin:
                 self.on_status(job_id, f"Chyba při stahování: {ex}", STATUS_ORANGE)
                 self._cleanup_output(opts)
                 return False
-            except Exception as ex:
-                self.on_log(f"Neočekávaná chyba: {ex}")
+            except Exception:
+                self.on_log(f"Neočekávaná chyba při stahování: {traceback.format_exc()}")
                 self.on_status(job_id, "Neočekávaná chyba při stahování.", STATUS_ORANGE)
                 self._cleanup_output(opts)
                 return False

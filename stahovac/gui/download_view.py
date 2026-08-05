@@ -225,6 +225,9 @@ class DownloadView:
             except MetadataError as e:
                 logger.warning("Metadata fetch selhal pro %s: %s", url, e)
                 metadata = None
+            except Exception:
+                logger.exception("Neočekávaná chyba při fetchi metadat pro %s", url)
+                raise
             if request_id != self._metadata_request_id:
                 return
             if self._last_url_fetched != url:
