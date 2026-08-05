@@ -21,6 +21,38 @@ CRF_DEFAULT = 23
 # filesystémech (Windows MAX_PATH, ext4 255 B na komponentu).
 MAX_FILENAME_STEM = 150
 
+# Časové limity a prodlevy (dříve roztroušené magic numbers)
+URL_DEBOUNCE_SECONDS = 0.4
+METADATA_JOIN_INTERVAL = 0.3
+
+YTDLP_SOCKET_TIMEOUT = 15
+YTDLP_RETRIES = 5
+YTDLP_EXTRACTOR_RETRIES = 3
+YTDLP_FILE_ACCESS_RETRIES = 3
+YTDLP_CONCURRENT_FRAGMENTS = 5
+YTDLP_FRAGMENT_RETRIES = 10
+YTDLP_MAX_ATTEMPTS = 3
+
+FFMPEG_TIMEOUT_MIN = 60.0
+FFMPEG_TIMEOUT_FULL = 7200.0
+FFMPEG_TIMEOUT_FACTOR_REENCODE = 5
+FFMPEG_TIMEOUT_FACTOR_COPY = 2
+FFMPEG_RECONNECT_DELAY_MAX = 5
+FFMPEG_PROCESS_WAIT = 10
+
+# Status barvy a hlášky (magic stringy dle auditu)
+STATUS_BLUE = "blue"
+STATUS_ORANGE = "orange"
+STATUS_GREEN = "green"
+
+STATUS_DOWNLOADING = "Stahuji…"
+STATUS_CANCELLING = "Ruším stahování…"
+STATUS_CANCELLED = "Stahování zrušeno."
+STATUS_FETCHING_INFO = "Načítám info o videu…"
+STATUS_PROCESSING_CUT = "Ořezávám video…"
+STATUS_FINISHED_PROCESSING = "Dokončeno, zpracovávám…"
+STATUS_RANGED_DOWNLOADING = "Stahuji jen vybraný úsek (HLS)…"
+
 
 class MediaFormat(str, Enum):
     MP4 = "Video + audio (MP4)"

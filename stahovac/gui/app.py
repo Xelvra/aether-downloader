@@ -10,6 +10,7 @@ from stahovac.config.app_config import coerce_crf
 from stahovac.config.constants import (
     APP_TITLE,
     COOKIES_FILE_OPTION,
+    STATUS_CANCELLING,
     VERSION_DISPLAY,
     CookieSource,
 )
@@ -705,7 +706,7 @@ class GuiApp:
         if not self._is_downloading:
             return
         self._manager.cancel_download()
-        self.on_status("Ruším stahování…", COLOR_WARN)
+        self.on_status(STATUS_CANCELLING, COLOR_WARN)
         self._safe_page_update()
         self._schedule_force_stop()
 

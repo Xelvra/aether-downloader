@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import flet as ft
 
 import stahovac.gui.theme as th
+from stahovac.config.constants import URL_DEBOUNCE_SECONDS
 from stahovac.core.metadata import MetadataError, MetadataService
 from stahovac.core.validator import is_valid_url
 from stahovac.gui.theme import (
@@ -200,7 +201,7 @@ class DownloadView:
     def _on_url_change(self, e):
         if self._debounce_timer:
             self._debounce_timer.cancel()
-        self._debounce_timer = threading.Timer(0.4, self.refresh_metadata)
+        self._debounce_timer = threading.Timer(URL_DEBOUNCE_SECONDS, self.refresh_metadata)
         self._debounce_timer.daemon = True
         self._debounce_timer.start()
 

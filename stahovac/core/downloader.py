@@ -13,7 +13,15 @@ from typing import Any
 import yt_dlp
 
 from stahovac.config.app_config import coerce_crf
-from stahovac.config.constants import FORMAT_MP4, MediaFormat
+from stahovac.config.constants import (
+    FORMAT_MP4,
+    STATUS_CANCELLED,
+    STATUS_FETCHING_INFO,
+    STATUS_GREEN,
+    STATUS_ORANGE,
+    STATUS_PROCESSING_CUT,
+    MediaFormat,
+)
 from stahovac.core._ffmpeg import (  # noqa: F401  (re-export: zůstává importovatelné z core.downloader)
     _RE_FFMPEG_TIME,
     FfmpegTrimMixin,
@@ -127,7 +135,7 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
 
     def _finish_cancelled(self, job_id: str) -> None:
         """Zrušení uživatelem: vždy nastaví finální status, aby se UI neviselo."""
-        self.on_status(job_id, "Stahování zrušeno.", "orange")
+        self.on_status(job_id, STATUS_CANCELLED, STATUS_ORANGE)
         self._set_state(DownloadState.CANCELLED)
         self._finish_once(job_id, False, "Zrušeno")
 
@@ -146,7 +154,7 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
                 return
 
             self._set_state(DownloadState.FETCHING_METADATA)
-            self.on_status(job_id, "Načítám info o videu…", "orange")
+            self.on_status(job_id, STATUS_FETCHING_INFO, STATUS_ORANGE)
             video_title = self._get_title(url)
             if self.is_cancelled:
                 self._finish_cancelled(job_id)
@@ -186,13 +194,13 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
                     found = _find_job_file(job_dir)
                     if not found:
                         self.on_log("Chyba: yt-dlp skončil, ale nenalezen žádný výstupní soubor.")
-                        self.on_status(job_id, "Stahování se nezdařilo – nenalezen výstupní soubor.", "orange")
+                        self.on_status(job_id, "Stahování se nezdařilo – nenalezen výstupní soubor.", STATUS_ORANGE)
                         self._finish_fail(job_id)
                         return
                     elif found and not params.whole_video and not is_subs_dl:
                         self._set_state(DownloadState.PROCESSING)
                         _ensure_ffmpeg_ready()
-                        self.on_status(job_id, "Ořezávám video…", "orange")
+                        self.on_status(job_id, STATUS_PROCESSING_CUT, STATUS_ORANGE)
                         trimmed = self._cut_with_ffmpeg(
                             found,
                             params.start_time,
@@ -210,7 +218,7 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
                             found.unlink(missing_ok=True)
                             fpath = self._move_output_files(job_dir, output_folder)
                         else:
-                            self.on_status(job_id, "Ořez se nezdařil. Původní soubor byl zachován.", "orange")
+                            self.on_status(job_id, "Ořez se nezdařil. Původní soubor byl zachován.", STATUS_ORANGE)
                             fpath = self._move_output_files(job_dir, output_folder)
                     else:
                         fpath = self._move_output_files(job_dir, output_folder)
@@ -226,7 +234,7 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
             self._finish_once(job_id, False, "Stahování selhalo")
         except Exception:
             self.on_log(f"Kritická výjimka: {traceback.format_exc()}")
-            self.on_status(job_id, "Aplikaci nastala chyba. Podrobnosti v logu.", "orange")
+            self.on_status(job_id, "Aplikaci nastala chyba. Podrobnosti v logu.", STATUS_ORANGE)
             self._finish_once(job_id, False, "Operace se nezdařila")
         finally:
             keep_failed = os.environ.get(AETHER_KEEP_FAILED_JOBS, "") == "1" and not success
@@ -236,7 +244,7 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
                 shutil.rmtree(job_dir, ignore_errors=True)
             if not success:
                 if not self._finish_fired:
-                    self.on_status(job_id, "Operace se nezdařila.", "orange")
+                    self.on_status(job_id, "Operace se nezdařila.", STATUS_ORANGE)
                 self._finish_once(job_id, False, "Worker finished")
 
     def _move_output_files(self, job_dir: Path, output_folder: str) -> str | None:
@@ -289,7 +297,7 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
             msg = "Zvuk (MP3) úspěšně stažen!"
         else:
             msg = "Video (MP4) úspěšně staženo!"
-        self.on_status(job_id, msg, "green")
+        self.on_status(job_id, msg, STATUS_GREEN)
         self.on_log("Hotovo! Soubor úspěšně uložen.")
         if file_path:
             HistoryManager.append(title, url, file_path)
@@ -297,6 +305,6 @@ class Downloader(YtDlpMixin, HlsRangedMixin):
         self._finish_once(job_id, True, "Úspěch")
 
     def _finish_fail(self, job_id: str) -> None:
-        self.on_status(job_id, "Stahování se nezdařilo. Podrobnosti v logu.", "orange")
+        self.on_status(job_id, "Stahování se nezdařilo. Podrobnosti v logu.", STATUS_ORANGE)
         self._set_state(DownloadState.FAILED)
         self._finish_once(job_id, False, "Stahování selhalo")

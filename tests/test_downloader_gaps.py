@@ -9,7 +9,7 @@ import yt_dlp
 
 import stahovac.core.downloader as dl_mod
 from stahovac.core.downloader import Downloader, _closest_height_format, _fmt_timestamp, _unique_dest
-from stahovac.core.metadata import MetadataService
+from stahovac.core.metadata import MetadataError, MetadataService
 from stahovac.models import DownloadParams, VideoMetadata
 
 
@@ -50,11 +50,11 @@ class TestSelectHlsInvalidQuality:
 
 
 class TestUniqueDestFallback:
-    def test_returns_dest_after_exhausting_counters(self, tmp_path):
+    def test_finds_free_name_after_many_collisions(self, tmp_path):
         (tmp_path / "a.mp4").write_text("x")
         for i in range(1, 1000):
             (tmp_path / f"a ({i}).mp4").write_text("x")
-        assert _unique_dest(tmp_path, "a.mp4") == tmp_path / "a.mp4"
+        assert _unique_dest(tmp_path, "a.mp4") == tmp_path / "a (1000).mp4"
 
 
 class TestKillProcess:
@@ -265,9 +265,7 @@ class TestRangedDownload:
         dl = self._make_dl(logs=logs)
 
         def boom(url, config, extra_opts=None, cancel_check=None):
-            raise yt_dlp.utils.DownloadError(
-                "ERROR: [kick:vod] 019fac9d: Kick VOD 019fac9d not found (deleted or unavailable)"
-            )
+            raise MetadataError("ERROR: [kick:vod] 019fac9d: Kick VOD 019fac9d not found (deleted or unavailable)")
 
         dl._metadata.fetch_info = boom
         assert (

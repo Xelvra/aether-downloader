@@ -11,7 +11,12 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
-from stahovac.config.constants import END_OPTION_FULL, QUALITY_BEST
+from stahovac.config.constants import (
+    END_OPTION_FULL,
+    QUALITY_BEST,
+    STATUS_BLUE,
+    STATUS_RANGED_DOWNLOADING,
+)
 from stahovac.core._ffmpeg import FfmpegTrimMixin, _fmt_timestamp
 from stahovac.core.metadata import MetadataError, MetadataService
 from stahovac.core.validator import pad_time
@@ -141,7 +146,7 @@ class HlsRangedMixin(FfmpegTrimMixin):
             str(ffmpeg_bin),
         )
         self.on_log(f"Stahuji jen úsek (HLS): {dl_mod._sanitize_cmd(cmd)}")
-        self.on_status(job_id, "Stahuji jen vybraný úsek (HLS)…", "blue")
+        self.on_status(job_id, STATUS_RANGED_DOWNLOADING, STATUS_BLUE)
         proc = dl_mod.subprocess.Popen(
             cmd,
             stdout=dl_mod.subprocess.DEVNULL,

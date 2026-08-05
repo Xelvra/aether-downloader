@@ -10,7 +10,22 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
-from stahovac.config.constants import QUALITY_BEST, MediaFormat
+from stahovac.config.constants import (
+    QUALITY_BEST,
+    STATUS_BLUE,
+    STATUS_DOWNLOADING,
+    STATUS_FINISHED_PROCESSING,
+    STATUS_GREEN,
+    STATUS_ORANGE,
+    YTDLP_CONCURRENT_FRAGMENTS,
+    YTDLP_EXTRACTOR_RETRIES,
+    YTDLP_FILE_ACCESS_RETRIES,
+    YTDLP_FRAGMENT_RETRIES,
+    YTDLP_MAX_ATTEMPTS,
+    YTDLP_RETRIES,
+    YTDLP_SOCKET_TIMEOUT,
+    MediaFormat,
+)
 from stahovac.core.metadata import YtdlLogger
 from stahovac.models import DownloadParams
 from stahovac.platforms import platform_opts
@@ -52,13 +67,13 @@ def _build_ydl_opts(
         "quiet": True,
         "no_warnings": True,
         "logger": YtdlLogger(),
-        "concurrent_fragments": 5,
-        "fragment_retries": 10,
+        "concurrent_fragments": YTDLP_CONCURRENT_FRAGMENTS,
+        "fragment_retries": YTDLP_FRAGMENT_RETRIES,
         "progress_hooks": [progress_hook],
-        "socket_timeout": 15,
-        "retries": 5,
-        "extractor_retries": 3,
-        "file_access_retries": 3,
+        "socket_timeout": YTDLP_SOCKET_TIMEOUT,
+        "retries": YTDLP_RETRIES,
+        "extractor_retries": YTDLP_EXTRACTOR_RETRIES,
+        "file_access_retries": YTDLP_FILE_ACCESS_RETRIES,
         "js_runtimes": {"node": {}},
     }
 
@@ -130,11 +145,11 @@ class YtDlpMixin:
             eta = _format_eta(d.get("eta"))
             self.on_progress(job_id, percent, speed, eta)
         elif d["status"] == "finished":
-            self.on_status(job_id, "Dokončeno, zpracovávám…", "orange")
+            self.on_status(job_id, STATUS_FINISHED_PROCESSING, STATUS_ORANGE)
 
     def _download_with_ytdlp(self, url: str, opts: dict, job_id: str) -> bool:
-        max_attempts = 3
-        self.on_status(job_id, "Stahuji…", "blue")
+        max_attempts = YTDLP_MAX_ATTEMPTS
+        self.on_status(job_id, STATUS_DOWNLOADING, STATUS_BLUE)
         for attempt in range(1, max_attempts + 1):
             try:
                 if self._cancel_event.is_set():
@@ -154,7 +169,7 @@ class YtDlpMixin:
                     return False
                 if "Unable to download video subtitles" in err:
                     self.on_log(f"Titulky nebyly zcela staženy: {err[:200]}")
-                    self.on_status(job_id, "Titulky staženy (některé jazyky nemusí být k dispozici).", "green")
+                    self.on_status(job_id, "Titulky staženy (některé jazyky nemusí být k dispozici).", STATUS_GREEN)
                     return True
                 if attempt < max_attempts and self._is_transient_error(err):
                     if self._cancel_event.wait(timeout=2 * attempt):
@@ -169,12 +184,12 @@ class YtDlpMixin:
                 return False
             except dl_mod.yt_dlp.utils.YoutubeDLError as ex:
                 self.on_log(f"Chyba yt-dlp: {ex}")
-                self.on_status(job_id, f"Chyba při stahování: {ex}", "orange")
+                self.on_status(job_id, f"Chyba při stahování: {ex}", STATUS_ORANGE)
                 self._cleanup_output(opts)
                 return False
             except Exception as ex:
                 self.on_log(f"Neočekávaná chyba: {ex}")
-                self.on_status(job_id, "Neočekávaná chyba při stahování.", "orange")
+                self.on_status(job_id, "Neočekávaná chyba při stahování.", STATUS_ORANGE)
                 self._cleanup_output(opts)
                 return False
         return False  # pragma: no cover – smyčka retry vždy vrací v některé větvi
@@ -210,20 +225,20 @@ class YtDlpMixin:
                 job_id,
                 "Přístup zamítnut (403). Soukromý obsah vyžaduje přihlášení/cookies v Nastavení; "
                 "jinak může jít o dočasné omezení – zkus to znovu později.",
-                "orange",
+                STATUS_ORANGE,
             )
         elif "429" in err or "rate limit" in err.lower() or "http error 410" in err.lower():
             self.on_status(
                 job_id,
                 "Dočasné omezení ze strany serveru (příliš mnoho požadavků). Počkej chvíli a zkus to znovu.",
-                "orange",
+                STATUS_ORANGE,
             )
         elif "404" in err or "Video unavailable" in err or "not found (deleted or unavailable)" in err:
-            self.on_status(job_id, "Video není dostupné nebo bylo smazáno.", "orange")
+            self.on_status(job_id, "Video není dostupné nebo bylo smazáno.", STATUS_ORANGE)
         elif "registered users" in err:
-            self.on_status(job_id, "Video vyžaduje přihlášení – použij cookies.", "orange")
+            self.on_status(job_id, "Video vyžaduje přihlášení – použij cookies.", STATUS_ORANGE)
         else:
-            self.on_status(job_id, f"Stahování selhalo: {err[:200]}", "orange")
+            self.on_status(job_id, f"Stahování selhalo: {err[:200]}", STATUS_ORANGE)
 
 
 import stahovac.core.downloader as dl_mod  # noqa: E402  (cyklický import – jen runtime přístup)

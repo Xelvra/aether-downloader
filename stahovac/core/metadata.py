@@ -4,6 +4,12 @@ from collections.abc import Callable
 
 import yt_dlp
 
+from stahovac.config.constants import (
+    METADATA_JOIN_INTERVAL,
+    YTDLP_EXTRACTOR_RETRIES,
+    YTDLP_RETRIES,
+    YTDLP_SOCKET_TIMEOUT,
+)
 from stahovac.models import VideoMetadata
 from stahovac.platforms import platform_opts
 from stahovac.utils.cookies import resolve_cookies_opts
@@ -101,7 +107,7 @@ class MetadataService:
         while t.is_alive():
             if cancel_check is not None and cancel_check():
                 return None
-            t.join(timeout=0.3)
+            t.join(timeout=METADATA_JOIN_INTERVAL)
 
         if error_container[0]:
             self._log(f"Nemohu načíst metadata: {error_container[0][:200]}")
@@ -117,9 +123,9 @@ class MetadataService:
             "quiet": True,
             "no_warnings": True,
             "noplaylist": True,
-            "socket_timeout": 15,
-            "retries": 5,
-            "extractor_retries": 3,
+            "socket_timeout": YTDLP_SOCKET_TIMEOUT,
+            "retries": YTDLP_RETRIES,
+            "extractor_retries": YTDLP_EXTRACTOR_RETRIES,
             "js_runtimes": {"node": {}},
             "logger": YtdlLogger(),
         }

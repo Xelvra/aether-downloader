@@ -13,7 +13,15 @@ from collections.abc import Callable
 from pathlib import Path
 from queue import Empty, Queue
 
-from stahovac.config.constants import END_OPTION_FULL
+from stahovac.config.constants import (
+    END_OPTION_FULL,
+    FFMPEG_PROCESS_WAIT,
+    FFMPEG_RECONNECT_DELAY_MAX,
+    FFMPEG_TIMEOUT_FACTOR_COPY,
+    FFMPEG_TIMEOUT_FACTOR_REENCODE,
+    FFMPEG_TIMEOUT_FULL,
+    FFMPEG_TIMEOUT_MIN,
+)
 from stahovac.core.validator import pad_time, time_to_seconds
 from stahovac.utils.paths import truncate_filename
 
@@ -37,9 +45,9 @@ def _estimate_cut_duration(start_time: str, end_time: str, end_option: str | Non
 
 def _ffmpeg_timeout(estimated_secs: int | None, re_encode: bool) -> float:
     if estimated_secs and estimated_secs > 0:
-        factor = 5 if re_encode else 2
-        return max(60.0, estimated_secs * factor + 60.0)
-    return 7200.0
+        factor = FFMPEG_TIMEOUT_FACTOR_REENCODE if re_encode else FFMPEG_TIMEOUT_FACTOR_COPY
+        return max(FFMPEG_TIMEOUT_MIN, estimated_secs * factor + FFMPEG_TIMEOUT_MIN)
+    return FFMPEG_TIMEOUT_FULL
 
 
 def _build_ffmpeg_cmd(
@@ -87,7 +95,7 @@ def _headers_args(headers: dict) -> list[str]:
 
 
 def _hls_input_args(fmt: dict) -> list[str]:
-    args = ["-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5"]
+    args = ["-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", str(FFMPEG_RECONNECT_DELAY_MAX)]
     args += _headers_args(fmt.get("http_headers") or {})
     args += ["-i", fmt["url"]]
     return args
@@ -232,7 +240,7 @@ class FfmpegTrimMixin:
                 self.on_progress(job_id, percent, "–", "–")
 
         try:
-            proc.wait(timeout=10)
+            proc.wait(timeout=FFMPEG_PROCESS_WAIT)
         except (OSError, dl_mod.subprocess.TimeoutExpired):
             dl_mod._kill_process(proc)
             return False
