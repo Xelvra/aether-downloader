@@ -8,7 +8,7 @@ import flet as ft
 
 import stahovac.gui.theme as th
 from stahovac.config.constants import URL_DEBOUNCE_SECONDS
-from stahovac.core.metadata import MetadataError, MetadataService
+from stahovac.core.metadata import MetadataError
 from stahovac.core.validator import is_valid_url
 from stahovac.gui.theme import (
     BREAKPOINT_COMPACT,
@@ -29,14 +29,14 @@ class DownloadView:
     def __init__(
         self,
         page,
-        metadata_service: MetadataService,
+        fetch_metadata: Callable[[str, dict], VideoMetadata | None],
         config,
         on_start_download: Callable,
         on_cancel_download: Callable,
         on_metadata_fetched: Callable | None = None,
     ):
         self._page = page
-        self._metadata = metadata_service
+        self._fetch_metadata = fetch_metadata
         self._config = config
         self._on_start = on_start_download
         self._on_cancel = on_cancel_download
@@ -221,7 +221,7 @@ class DownloadView:
 
         def fetch_worker():
             try:
-                metadata = self._metadata.fetch(url, self._config)
+                metadata = self._fetch_metadata(url, self._config)
             except MetadataError as e:
                 logger.warning("Metadata fetch selhal pro %s: %s", url, e)
                 metadata = None

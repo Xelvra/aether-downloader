@@ -258,7 +258,7 @@ class GuiApp:
     def _build_views(self):
         self.download_view = DownloadView(
             page=self._page,
-            metadata_service=self._manager.downloader.metadata,
+            fetch_metadata=self._manager.downloader.metadata.fetch,
             config=self._config,
             on_start_download=self._on_start_download,
             on_cancel_download=self._on_cancel_download,

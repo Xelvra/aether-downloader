@@ -37,7 +37,7 @@ class TestDownloadViewGetUrl:
     def _make_view(self):
         return DownloadView(
             _FakePage(),
-            metadata_service=None,
+            fetch_metadata=lambda url, cfg: None,
             config={},
             on_start_download=lambda url: None,
             on_cancel_download=lambda: None,

@@ -13,6 +13,7 @@
 - Testy: `TestDoStartDownload` mockuje `ffmpeg.find_ffmpeg` – testy jsou deterministické i v CI bez nainstalovaného FFmpeg.
 
 ### Změněno
+- Refactoring (audit HIGH-05): `DownloadView` už nezná `MetadataService` – dostává port `fetch_metadata: Callable[[str, dict], VideoMetadata | None]`; zapojení zůstává v `gui/app.py`. GUI je čistá prezentační vrstva bez vazby na implementaci metadat.
 - Refactoring (audit MEDIUM-04/05): centralizované magic numbers a magic stringy do `config/constants.py` – debounce URL (0.4 s), yt-dlp timeouty/retry (15 s, 5/3/3, 5 fragmentů, 10 retry fragmentů, 3 pokusy), FFmpeg timeouty (60 s/7200 s, faktory 5/2, reconnect 5, wait 10), prodleva metadata join (0.3 s) a status barvy/hlášky (`STATUS_BLUE`, `STATUS_ORANGE`, `STATUS_GREEN`, `STATUS_DOWNLOADING`, `STATUS_CANCELLED`, …). Chování beze změny, hodnoty identické.
 - Oprava (audit CRITICAL-06): `_unique_dest()` už nemá arbitrární limit 999 kolizí (`while True` místo `range(1, 1000)`) – po 999 shodných názvech se soubor nikdy nepřepíše. Regresní test s 1000+ kolizemi.
 - Oprava (audit CRITICAL-04): nový `utils/paths.py::truncate_filename()` + konstanta `MAX_FILENAME_STEM` (150) – extrémně dlouhé tituly videí (300+ znaků) už nezpůsobí OSError/FileNotFoundError. Aplikováno na názvy ranged HLS výstupu, FFmpeg ořezu i přesunu hotových souborů. Regresní testy.

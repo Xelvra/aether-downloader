@@ -30,7 +30,7 @@ def _make(meta=None, on_meta=None):
     page = _FakePage()
     view = DownloadView(
         page,
-        metadata_service=meta,
+        fetch_metadata=meta.fetch if meta is not None else (lambda url, cfg: None),
         config={},
         on_start_download=started.append,
         on_cancel_download=lambda: cancelled.append(1),
