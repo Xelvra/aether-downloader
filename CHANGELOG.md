@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.3.6] – 2026-08-05
 
 ### Přidáno
 - ROADMAP: sekce **„Technický dluh z auditu (05.08.2026)"** – zbylé nálezy (cyklické importy, monkeypatchování, kompozice místo mixinů, event struktura, sjednocení konfigurace, …) se naplánují spolu s dalšími funkcemi, takže nebude potřeba nový audit.
@@ -12,14 +12,16 @@
 - Testy: odstraněn overengineering – „coverage theater" testy triviálních/nedostupných větví (`_bundled_ffmpeg_path` se simulovaným frozen, OSError větev `_looks_like_archive`, `_coerce_bool(None)`, stream handler v `configure_logging`, Wine `continue`/file-manager chain) a testy čistých delegací v `GuiApp`; zjednodušeny Wine otevírače (`xdg-open` + otevření rodičovské složky místo fallback řetězců) a `_wine_to_unix` (jen `Z:\` → `/`). CONTRIBUTING: strom projektu odpovídá realitě.
 - Testy: `TestDoStartDownload` mockuje `ffmpeg.find_ffmpeg` – testy jsou deterministické i v CI bez nainstalovaného FFmpeg.
 
+### Opraveno
+- (audit CRITICAL-01) `DownloadView.refresh_metadata()` už nepolyká `except Exception` – chytá jen očekávané `MetadataError` (nová výjimka v `core/metadata.py`, do které se balí chyby yt-dlp). Programátorské/threadové chyby se zalogují a propadnou, aby šly odhalit. Regresní testy.
+- (audit CRITICAL-02) `DownloadView` dostal `_closed` flag – `close()` ho nastaví a `refresh_metadata()` po zavření už neodešle práci do `ThreadPoolExecutor` (race při shutdown se nezakrývá jen `except RuntimeError`). Regresní testy.
+- (audit CRITICAL-04) nový `utils/paths.py::truncate_filename()` + konstanta `MAX_FILENAME_STEM` (150) – extrémně dlouhé tituly videí (300+ znaků) už nezpůsobí OSError/FileNotFoundError. Aplikováno na názvy ranged HLS výstupu, FFmpeg ořezu i přesunu hotových souborů. Regresní testy.
+- (audit CRITICAL-06) `_unique_dest()` už nemá arbitrární limit 999 kolizí (`while True` místo `range(1, 1000)`) – po 999 shodných názvech se soubor nikdy nepřepíše. Regresní test s 1000+ kolizemi.
+
 ### Změněno
 - Logování (audit quick win #7): neočekávané výjimky se místo pouhé hlášky logují s celým tracebackem – v `DownloadView.refresh_metadata()` (`logger.exception` + re-raise) i v `YtDlpMixin._download_with_ytdlp()`. Žádná výjimka nezmizí tiše.
 - Refactoring (audit HIGH-05): `DownloadView` už nezná `MetadataService` – dostává port `fetch_metadata: Callable[[str, dict], VideoMetadata | None]`; zapojení zůstává v `gui/app.py`. GUI je čistá prezentační vrstva bez vazby na implementaci metadat.
 - Refactoring (audit MEDIUM-04/05): centralizované magic numbers a magic stringy do `config/constants.py` – debounce URL (0.4 s), yt-dlp timeouty/retry (15 s, 5/3/3, 5 fragmentů, 10 retry fragmentů, 3 pokusy), FFmpeg timeouty (60 s/7200 s, faktory 5/2, reconnect 5, wait 10), prodleva metadata join (0.3 s) a status barvy/hlášky (`STATUS_BLUE`, `STATUS_ORANGE`, `STATUS_GREEN`, `STATUS_DOWNLOADING`, `STATUS_CANCELLED`, …). Chování beze změny, hodnoty identické.
-- Oprava (audit CRITICAL-06): `_unique_dest()` už nemá arbitrární limit 999 kolizí (`while True` místo `range(1, 1000)`) – po 999 shodných názvech se soubor nikdy nepřepíše. Regresní test s 1000+ kolizemi.
-- Oprava (audit CRITICAL-04): nový `utils/paths.py::truncate_filename()` + konstanta `MAX_FILENAME_STEM` (150) – extrémně dlouhé tituly videí (300+ znaků) už nezpůsobí OSError/FileNotFoundError. Aplikováno na názvy ranged HLS výstupu, FFmpeg ořezu i přesunu hotových souborů. Regresní testy.
-- Oprava (audit CRITICAL-02): `DownloadView` dostal `_closed` flag – `close()` ho nastaví a `refresh_metadata()` po zavření už neodešle práci do `ThreadPoolExecutor` (race při shutdown se nezakrývá jen `except RuntimeError`). Regresní testy.
-- Oprava (audit CRITICAL-01): `DownloadView.refresh_metadata()` už nepolyká `except Exception` – chytá jen očekávané `MetadataError` (nová výjimka v `core/metadata.py`, do které se balí chyby yt-dlp). Programátorské/threadové chyby se zalogují a propadnou, aby šly odhalit. Regresní testy.
 - Dokumentace: FFmpeg se automaticky stahuje vždy, když v systému chybí – ne jen k ořezu/MP3, ale i ke spojení obrazu se zvukem (merge) při stahování MP4. Aktualizováno v README a nápovědě v aplikaci (`help_content.py`).
 
 ## [1.3.5] – 2026-08-04
