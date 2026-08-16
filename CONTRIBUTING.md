@@ -52,7 +52,7 @@ aether-downloader/
 ├── SECURITY.md                 # Postup hlášení zranitelností
 ├── CODE_OF_CONDUCT.md          # Pravidla chování
 ├── LICENSE                     # MIT licence
-├── LICENSE-THIRD-PARTY.md      # Licence závislostí (FFmpeg a další)
+├── THIRD-PARTY-NOTICES.md      # Licence závislostí (FFmpeg a další)
 ├── .gitignore                  # Definice souborů a složek ignorovaných Gitem
 ├── hooks/pre-push              # Lokální pre-push hook (ruff, mypy, pytest)
 ├── .github/

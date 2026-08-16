@@ -221,7 +221,7 @@ Chceš aplikaci spustit ze zdrojového kódu, upravovat ji nebo si sestavit vlas
 
 Aplikace je pod licencí **MIT** — volně k použití, šíření i úpravám. Plné znění je v [LICENSE](LICENSE).
 
-Přehled licencí závislostí a informace o FFmpeg najdeš v [LICENSE-THIRD-PARTY.md](LICENSE-THIRD-PARTY.md).
+Přehled licencí závislostí a informace o FFmpeg najdeš v [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ---
 
